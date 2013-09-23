@@ -5,28 +5,13 @@ public class MancalaDemo {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		Pit pit = new Pit();
-		System.out.println(pit.toString());
+	public static void main(String[] args) {		
 		
-		boolean initSouthsTurn = true;
-		Pit[] initSouthPits = pitsGenerator(7,4,6);
-		Pit[] initNorth = pitsGenerator(7,4,6);
+		int[] initSouthPits = {4,4,4,4,4,4,0};
+		int[] initNorth = {4,4,4,4,4,4,0};
 			
-		State INIT_STATE = new State(initSouthPits, initNorth, initSouthsTurn);
+		State INIT_STATE = new State(initSouthPits, initNorth, PlayerColor.SOUTH);
 		System.out.println(INIT_STATE.toString());
-	}
-	
-	private static Pit[] pitsGenerator(int numberOfPits, int seeds, int treasureChestIndex){
-		Pit [] testPits = new Pit[numberOfPits];
-		for(int i = 0; i < numberOfPits; i++)
-			testPits[i] = new Pit(seeds, false);
-		
-		if(treasureChestIndex < testPits.length)
-			testPits[treasureChestIndex] = new Pit(0, true);	
-		
-		return testPits;			
 	}
 
 }
