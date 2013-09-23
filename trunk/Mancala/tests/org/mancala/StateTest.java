@@ -9,59 +9,59 @@ public class StateTest {
 
 	@Test
 	public void testConstructorWithNormalValuesIsWorking() {
-		new State(STANDARD_PITS, STANDARD_PITS, PlayerColor.SOUTH);
+		new State(STANDARD_PITS.clone(), STANDARD_PITS.clone(), PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithNullSouthPits() {
-		new State(null, STANDARD_PITS, PlayerColor.SOUTH);
+		new State(null, STANDARD_PITS.clone(), PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithNullNorthPits() {
-		new State(STANDARD_PITS, null, PlayerColor.SOUTH);
+		new State(STANDARD_PITS.clone(), null, PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithNotEnoughSouthPits() {
 		//There should be exactly 7 Pits		
 		int[] testPits = {4,4,4,4,4,0};
-		new State(testPits, STANDARD_PITS, PlayerColor.SOUTH);
+		new State(testPits, STANDARD_PITS.clone(), PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithTooManySouthPits() {
 		//There should be exactly 7 Pits
 		int[] testPits = {4,4,4,4,4,4,4,0};
-		new State(testPits, STANDARD_PITS, PlayerColor.SOUTH);
+		new State(testPits, STANDARD_PITS.clone(), PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithNotEnoughNorthPits() {
 		//There should be exactly 7 Pits
 		int[] testPits = {4,4,4,4,4,0};
-		new State(STANDARD_PITS, testPits, PlayerColor.SOUTH);
+		new State(STANDARD_PITS.clone(), testPits, PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithTooManyNorthPits() {
 		//There should be exactly 7 Pits
 		int[] testPits = {4,4,4,4,4,4,4,0};
-		new State(STANDARD_PITS, testPits, PlayerColor.SOUTH);
+		new State(STANDARD_PITS.clone(), testPits, PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithNegativeSeedsInTheSouthPits() {
 		//there is never a negative amount of seeds in one of the pits
 		int[] testPits = {-1,4,4,4,4,4,0};
-		new State(testPits, STANDARD_PITS, PlayerColor.SOUTH);
+		new State(testPits, STANDARD_PITS.clone(), PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testConstructorWithNegativeSeedsInTheNorthPits() {
 		//there is never a negative amount of seeds in one of the pits
 		int[] testPits = {-1,4,4,4,4,4,0};
-		new State(STANDARD_PITS, testPits, PlayerColor.SOUTH);
+		new State(STANDARD_PITS.clone(), testPits, PlayerColor.SOUTH);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
@@ -82,18 +82,18 @@ public class StateTest {
 	
 	@Test
 	public void testMoveOnlyOnActiveSide() {
-		State testState = new State(STANDARD_PITS, STANDARD_PITS, PlayerColor.SOUTH);
+		State testState = new State(STANDARD_PITS.clone(), STANDARD_PITS.clone(), PlayerColor.SOUTH);
 		testState.makeMove(0);
 		
 		int[] expectedSouthPits = {0, 5, 5, 5, 5, 4, 0};
-		State expectedState = new State(expectedSouthPits, STANDARD_PITS, PlayerColor.NORTH);
+		State expectedState = new State(expectedSouthPits, STANDARD_PITS.clone(), PlayerColor.NORTH);
 		
 		assertEquals("From init south takes index 0 seeds: ", testState, expectedState);
 	}
 	
 	@Test
 	public void testMoveAcrossOneSide() {
-		State testState = new State(STANDARD_PITS, STANDARD_PITS, PlayerColor.SOUTH);
+		State testState = new State(STANDARD_PITS.clone(), STANDARD_PITS.clone(), PlayerColor.SOUTH);
 		testState.makeMove(5);
 		
 		int[] expectedNorthPits = {5, 5, 5, 4, 4, 4, 0};
@@ -134,7 +134,7 @@ public class StateTest {
 	@Test
 	public void testMoveLastOnTreasureChestSouth() {
 		//If the last seed of a move landed on your treasure chest, then you can move again
-		State testState = new State(STANDARD_PITS, STANDARD_PITS, PlayerColor.SOUTH);
+		State testState = new State(STANDARD_PITS.clone(), STANDARD_PITS.clone(), PlayerColor.SOUTH);
 		testState.makeMove(2);
 		
 		int[] expectedNorthPits = {4, 4, 4, 4, 4, 4, 0};
@@ -147,7 +147,7 @@ public class StateTest {
 	@Test
 	public void testMoveLastOnTreasureChestNorth() {
 		//If the last seed of a move landed on your treasure chest, then you can move again
-		State testState = new State(STANDARD_PITS, STANDARD_PITS, PlayerColor.NORTH);
+		State testState = new State(STANDARD_PITS.clone(), STANDARD_PITS.clone(), PlayerColor.NORTH);
 		testState.makeMove(2);
 		
 		int[] expectedNorthPits = {4, 4, 0, 5, 5, 5, 1};

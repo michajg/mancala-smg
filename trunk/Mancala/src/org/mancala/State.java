@@ -33,11 +33,15 @@ public class State {
 	}
 	
 	public void makeMove(int chosenPitIndex) {
-	    //magic
+		//magic
 	}
 	
 	public int[] getPitsOfActivePlayer(){
 		return this.whoseTurn.isSouth() ? this.southPits : this.northPits;
+	}
+	
+	public int[] getPitsOfInactivePlayer(){
+		return this.whoseTurn.isSouth() ? this.northPits : this.southPits;
 	}
 	
 	@Override
@@ -78,7 +82,4 @@ public class State {
 			return false;
 		return true;
 	}
-	
-	
-	
 }
