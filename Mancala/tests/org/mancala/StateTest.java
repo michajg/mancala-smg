@@ -88,7 +88,7 @@ public class StateTest {
 		int[] expectedSouthPits = {0, 5, 5, 5, 5, 4, 0};
 		State expectedState = new State(expectedSouthPits, STANDARD_PITS.clone(), PlayerColor.NORTH);
 		
-		assertEquals("From init south takes index 0 seeds: ", testState, expectedState);
+		assertEquals("From init south takes index 0 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -100,7 +100,7 @@ public class StateTest {
 		int[] expectedSouthPits = {4, 4, 4, 4, 4, 0, 1};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.NORTH);
 		
-		assertEquals("From init south takes index 5 seeds: ", testState, expectedState);
+		assertEquals("From init south takes index 5 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -114,7 +114,7 @@ public class StateTest {
 		int[] expectedSouthPits = {2, 2, 2, 2, 2, 1, 12};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.NORTH);
 		
-		assertEquals("From custom south takes index 5 seeds: ", testState, expectedState);
+		assertEquals("From custom south takes index 5 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -128,7 +128,7 @@ public class StateTest {
 		int[] expectedSouthPits = {3, 3, 3, 2, 2, 2, 10};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.SOUTH);
 		
-		assertEquals("From custom south takes index 5 seeds: ", testState, expectedState);
+		assertEquals("From custom south takes index 5 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -141,7 +141,7 @@ public class StateTest {
 		int[] expectedSouthPits = {4, 4, 0, 5, 5, 5, 1};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.SOUTH);
 		
-		assertEquals("From custom south takes index 2 seeds: ", testState, expectedState);
+		assertEquals("From custom south takes index 2 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -154,7 +154,7 @@ public class StateTest {
 		int[] expectedSouthPits = {4, 4, 4, 4, 4, 4, 0};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.NORTH);
 		
-		assertEquals("From custom south takes index 2 seeds: ", testState, expectedState);
+		assertEquals("From custom south takes index 2 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -170,7 +170,7 @@ public class StateTest {
 		int[] expectedSouthPits = {2, 0, 3, 0, 2, 2, 17};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.NORTH);
 		
-		assertEquals("From custom south takes index 1 seeds: ", testState, expectedState);
+		assertEquals("From custom south takes index 1 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -186,7 +186,7 @@ public class StateTest {
 		int[] expectedSouthPits = {2, 2, 0, 2, 2, 2, 12};
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.SOUTH);
 		
-		assertEquals("From custom south takes index 1 seeds: ", testState, expectedState);
+		assertEquals("From custom south takes index 1 seeds: ", expectedState, testState);
 	}
 	
 	@Test
@@ -203,7 +203,7 @@ public class StateTest {
 		boolean expectedGameOver = true;
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.NORTH, expectedGameOver);
 		
-		assertEquals("South provokes GameOver: ", testState, expectedState);
+		assertEquals("South provokes GameOver: ", expectedState, testState);
 	}
 	
 	@Test
@@ -220,7 +220,7 @@ public class StateTest {
 		boolean expectedGameOver = true;
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.SOUTH, expectedGameOver);
 		
-		assertEquals("South provokes GameOver: ", testState, expectedState);
+		assertEquals("South provokes GameOver: ", expectedState, testState);
 	}
 	
 	@Test
@@ -237,7 +237,7 @@ public class StateTest {
 		boolean expectedGameOver = true;
 		State expectedState = new State(expectedSouthPits, expectedNorthPits, PlayerColor.NORTH, expectedGameOver);
 		
-		assertEquals("South provokes GameOver: ", testState, expectedState);
+		assertEquals("South provokes GameOver: ", expectedState, testState);
 	}
 	
 	@Test(expected = GameOverException.class)
@@ -257,22 +257,6 @@ public class StateTest {
 		State testState = new State(southPits, northPits, PlayerColor.SOUTH);
 		testState.makeMove(1);
 	}
-//	
-//	private boolean (State state1, State state2){
-//		//todo: maybe it would be better to overwrite the equals (and hashcode) methods of State
-//		
-//		if(!(state1.southPits.length == state2.southPits.length) || !(state1.northPits.length == state2.northPits.length))
-//			return false;
-//		
-//		for(int i = 0; i < state1.southPits.length; i++){
-//			if(!(state1.southPits[i] == state2.southPits[i]) || !(state1.northPits[i] == state2.northPits[i]))
-//				return false;
-//		}
-//		
-//		if(state1.whoseTurn != state2.whoseTurn)
-//			return false;
-//		
-//		return true;
-//	}
+
 
 }
