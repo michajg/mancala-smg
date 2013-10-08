@@ -1,0 +1,21 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:style field="css" type="org.mancala.client.GameCss">
+    .highlighted {
+      outline: dotted green 2px;
+    }
+    td img {
+      display: block
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    <g:HorizontalPanel ui:field="gameHorizontalPanel">
+      <g:Grid ui:field="treasureGridN"/>
+    	<g:Grid ui:field="gameGrid"/>
+    	<g:Grid ui:field="treasureGridS"/>
+    </g:HorizontalPanel>
+    <g:PopupPanel ui:field="gamePopupPanel"/>
+    
+  </g:HTMLPanel>
+</ui:UiBinder> 
