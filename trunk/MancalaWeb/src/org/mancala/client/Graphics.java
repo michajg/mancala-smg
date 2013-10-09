@@ -8,8 +8,11 @@ import org.mancala.shared.State;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
@@ -22,7 +25,7 @@ import com.google.gwt.user.client.ui.Widget;
 
 /**
  * The MVP-View of the Mancala game 
- * @author Micha
+ * @author Micha Guthmann
  */
 public class Graphics extends Composite implements View{
 	//private static GameImages gameImages = GWT.create(GameImages.class);
@@ -222,4 +225,53 @@ public class Graphics extends Composite implements View{
 	          });
 		gamePopupPanel.add(vPanel);		
 	}
+	
+	/**
+	 * Check if there was a previous game - if not return a new game
+	 * Look at the url fragment and try to deserialize a state
+	 */
+	@Override
+	public State getPreviousGame() {
+		String urlFragment = Window.Location.getHash();
+		State newState = new State();
+		if(urlFragment != "" && urlFragment != null && urlFragment.length() > 1){
+			try {
+				newState = presenter.deserializeState(urlFragment.substring(1, urlFragment.length()));
+			}
+			catch (Exception e) {
+				setMessage("New game because of error: " + e, "Okay", null);
+				newState = new State();
+			}
+		}
+		return newState;
+	}
+
+	/**
+	 * Add a serialized State to the history so a user can undo and redo actions
+	 */
+	@Override
+	public void setHistoryNewItem(String serializedState) {
+		History.newItem(serializedState);
+	}
+
+
+	/**
+	 * Add the ValueChangeHandler responsible for traversing the browser history
+	 */
+    public void addHistoryValueChangeHandler() {
+            History.addValueChangeHandler(new ValueChangeHandler<String> () {
+                    @Override
+                    public void onValueChange(ValueChangeEvent<String> event) {
+                    	try{
+                    		String historyToken = event.getValue();
+                            presenter.setState(presenter.deserializeState(historyToken));
+                    	}
+                        catch(Exception e) {
+                        	setMessage("New game because of error: " + e, "Okay", null);
+                        	presenter.addHistoryTriggerBoardUpdate(new State());
+                        }
+                    }
+            });
+    }
+    
 }

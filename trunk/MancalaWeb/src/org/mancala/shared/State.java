@@ -3,7 +3,8 @@ package org.mancala.shared;
 import java.util.Arrays;
 
 /**
- * @author Micha-Jamie Guthmann
+ * The MVP-Model for the Mancala game
+ * @author Micha Guthmann
  */
 public class State { 
 
@@ -281,19 +282,16 @@ public class State {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
+		
 		State other = (State) obj;
-		if (gameOver != other.gameOver)
+		if (obj == null || 
+			getClass() != obj.getClass() ||
+			!Arrays.equals(northPits, other.northPits) ||
+			!Arrays.equals(southPits, other.southPits) ||
+			whoseTurn != other.whoseTurn ||
+			gameOver != other.gameOver)
 			return false;
-		if (!Arrays.equals(northPits, other.northPits))
-			return false;
-		if (!Arrays.equals(southPits, other.southPits))
-			return false;
-		if (whoseTurn != other.whoseTurn)
-			return false;
+
 		return true;
 	}
 

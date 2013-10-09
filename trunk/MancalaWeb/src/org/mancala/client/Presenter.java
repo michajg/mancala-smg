@@ -5,14 +5,9 @@ import org.mancala.shared.State;
 import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.GameOverException;
 
-import com.google.gwt.event.logical.shared.ValueChangeEvent;
-import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.user.client.History;
-import com.google.gwt.user.client.Window;
-
 /**
  * The MVP-Presenter of the Mancala game
- * @author Micha
+ * @author Micha Guthmann
  */
 public class Presenter {
 	
@@ -43,12 +38,28 @@ public class Presenter {
 		 */
 		void setPitEnabled(int index, PlayerColor side, boolean enabled);/**
 		
+		/**
 		 * Informs the user of certain events. 
 		 * If the parameter for the buttons is null no button will be displayed.
 		 * The first button makes the information disappear, the second starts a new game
 		 */
 	    void setMessage(String labelMsg, String HideBtnText, String restartBtnText);
 	    
+	    /**
+	     * Check if there was a previous game - if not return a new game
+	     */
+		State getPreviousGame();
+		
+		/**
+		 * Add a serialized State to the history so a user can undo and redo actions
+		 */
+	    void setHistoryNewItem(String serializedState);
+	    
+		/**
+		 * Add the ValueChangeHandler responsible for traversing the browser history
+		 */
+	    void addHistoryValueChangeHandler();
+
 	}
 	
 	/**
@@ -59,21 +70,10 @@ public class Presenter {
 	 */
 	public Presenter(View graphics) {
 		this.graphics = graphics;
-		String urlFragment = Window.Location.getHash();
-		if(urlFragment != "" && urlFragment != null && urlFragment.length() > 1){
-			try {
-				state = deserializeState(urlFragment.substring(1, urlFragment.length()));
-			}
-			catch (Exception e) {
-				graphics.setMessage("New game because of error: " + e, "Okay", null);
-				state = new State();
-			}
-		}
-		else
-			state = new State();
+		state = graphics.getPreviousGame();
 		//the first newItem in History doesn't trigger the value change handler
-		History.newItem(serializeState(state));
-		addHistoryValueChangeHandler();
+		graphics.setHistoryNewItem(serializeState(state));
+		graphics.addHistoryValueChangeHandler();
 		updateBoard();
 	}
 	
@@ -84,23 +84,23 @@ public class Presenter {
 		
 		try {
 			state.makeMove(index);
-			addToHistoryAndTriggerBoardUpdate(state);
+			addHistoryTriggerBoardUpdate(state);
 		} 
 		catch (IllegalMoveException e) {
 			graphics.setMessage("New game because of error: " + e, "Okay", null);
-			addToHistoryAndTriggerBoardUpdate(new State());
+			addHistoryTriggerBoardUpdate(new State());
 		} 
 		catch (GameOverException e) {
 			graphics.setMessage("New game because of error: " + e, "Okay", null);
-			addToHistoryAndTriggerBoardUpdate(new State());
+			addHistoryTriggerBoardUpdate(new State());
 		}
 	}
 	
 	/**
 	 * When a new item is added to the history it triggers its value change handler in which the board will be updated
 	 */
-	private void addToHistoryAndTriggerBoardUpdate(State state){
-		History.newItem(serializeState(state));		
+	void addHistoryTriggerBoardUpdate(State state){
+		graphics.setHistoryNewItem(serializeState(state));		
 	}
 
 	/**
@@ -116,27 +116,11 @@ public class Presenter {
 		disableZeroSeedPits();
 		message();
 	}
-	
-	/**
-	 * When there are zero seeds in a pit it can't be chosen either so disable them
-	 */
-	private void disableZeroSeedPits() {
-		int[] activePits = new int [7];
-		if(state.getWhoseTurn().equals(PlayerColor.N))
-			activePits = state.getNorthPits();
-		else
-			activePits = state.getSouthPits();
-		
-		for(int i = 0; i < state.getNorthPits().length; i++){
-			if(activePits[i] == 0)
-				graphics.setPitEnabled(i, state.getWhoseTurn(), false);			
-		}
-	}
 
 	/**
 	 * It enables only the pits from the player whose turn it is
 	 */
-	private void enableActiveSide() {
+	void enableActiveSide() {
 		boolean enableNorth;
 		boolean enableSouth;
 		
@@ -154,11 +138,28 @@ public class Presenter {
 			graphics.setPitEnabled(i, PlayerColor.S, enableSouth);
 		}	
 	}
+
+	/**
+	 * When there are zero seeds in a pit it can't be chosen either so disable them
+	 */
+	void disableZeroSeedPits() {
+		int[] activePits = new int [7];
+		if(state.getWhoseTurn().equals(PlayerColor.N))
+			activePits = state.getNorthPits();
+		else
+			activePits = state.getSouthPits();
+		
+		//state.getNorthPits().length-1 because the last array field is the treasure chest
+		for(int i = 0; i < state.getNorthPits().length-1; i++){
+			if(activePits[i] == 0)
+				graphics.setPitEnabled(i, state.getWhoseTurn(), false);			
+		}
+	}
 	
 	/**
 	 * Set a message in the case of game over
 	 */
-	private void message(){
+	void message(){
 		if (state.isGameOver() == true) {
 			if(state.winner() == null){
 				graphics.setMessage("It's a tie!", "okay", "play again");
@@ -188,32 +189,13 @@ public class Presenter {
 	}
 
 	public void newGame() {		
-		addToHistoryAndTriggerBoardUpdate(new State());
+		addHistoryTriggerBoardUpdate(new State());
 	}
-	
-	/**
-	 * Add the ValueChangeHandler responsible for traversing the browser history
-	 */
-    public void addHistoryValueChangeHandler() {
-            History.addValueChangeHandler(new ValueChangeHandler<String> () {
-                    @Override
-                    public void onValueChange(ValueChangeEvent<String> event) {
-                    	try{
-                    		String historyToken = event.getValue();
-                            setState(deserializeState(historyToken));
-                    	}
-                        catch(Exception e) {
-                        	graphics.setMessage("New game because of error: " + e, "Okay", null);
-                        	addToHistoryAndTriggerBoardUpdate(new State());
-                        }
-                    }
-            });
-    }
 
     /**
      * gets a String serialized state and deserializes it into a State object
      */
-    private State deserializeState(String serialized) {
+    State deserializeState(String serialized) {
  	
     	int[] northPits = new int[7];
     	int[] southPits = new int[7];
