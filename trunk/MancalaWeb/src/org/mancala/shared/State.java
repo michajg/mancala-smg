@@ -20,6 +20,14 @@ public class State {
 	private int[] southPits;
 	private PlayerColor whoseTurn;
 	private boolean gameOver;
+	/**
+	 * 
+	 */
+	private boolean lastMoveWasOppositeCapture;
+	/**
+	 * 
+	 */
+	private int oppositeSeeds;
 	
 	public State() {
 		this.northPits = new int[]{4,4,4,4,4,4,0}; 
@@ -32,7 +40,15 @@ public class State {
 		this(northPits, southPits, whoseTurn, false);
 	}
 	
-	public State(int[] northPits, int[] southPits, PlayerColor whoseTurn, boolean gameOver) {	
+	public State(int[] northPits, int[] southPits, PlayerColor whoseTurn, boolean gameOver) {
+		this(northPits, southPits, whoseTurn, gameOver, false);
+	}
+	
+	public State(int[] northPits, int[] southPits, PlayerColor whoseTurn, boolean gameOver, boolean lastMoveWasOppositeCapture) {	
+		this(northPits, southPits, whoseTurn, gameOver, lastMoveWasOppositeCapture, 0);
+	}
+	
+	public State(int[] northPits, int[] southPits, PlayerColor whoseTurn, boolean gameOver, boolean lastMoveWasOppositeCapture, int oppositeSeeds) {	
 		if(northPits == null || southPits == null || northPits.length != 7 || southPits.length != 7) 
 			throw new IllegalArgumentException();
 		int helpS = 0;
@@ -50,6 +66,8 @@ public class State {
 		this.southPits = southPits;
 		this.whoseTurn = whoseTurn;
 		this.gameOver = gameOver;
+		this.lastMoveWasOppositeCapture = lastMoveWasOppositeCapture;
+		this.oppositeSeeds = oppositeSeeds;
 	}
 
 	/**
@@ -79,7 +97,21 @@ public class State {
 	public boolean isGameOver() {
 		return gameOver;
 	}
+	
+	/**
+	 * 
+	 */
+	public boolean getLastMoveWasOppositeCapture() {
+		return lastMoveWasOppositeCapture;
+	}
 
+	/**
+	 * 
+	 */
+	public int getOppositeSeeds() {
+		return oppositeSeeds;
+	}
+	
 	/**
 	 * A user can make a move by specifying from which pit he wants to distribute the seeds from
 	 * <p>Distribute seeds beginning with the pit corresponding with the chosen index + 1
@@ -171,16 +203,23 @@ public class State {
 	 * @param activePits the pits (north or south) where the last seed was placed
 	 */
 	private void manageOppositionCapture(int indexLastSeedPlaced, int[] activePits){
+		this.lastMoveWasOppositeCapture = false;
+		
 		if(activePits != getPitsOfWhoseTurn())
 			return;
 		if((activePits[indexLastSeedPlaced] == 1) && !endedOnTreasureChest(indexLastSeedPlaced, activePits)){ 
 			int[] otherPits = getOppositePits(activePits);
 			int seedAmountInOppositePit = otherPits[getMirrorIndex(indexLastSeedPlaced, activePits.length-2)];
 			if(seedAmountInOppositePit != 0){ 
+
+				this.lastMoveWasOppositeCapture = true;
+				this.oppositeSeeds = otherPits[getMirrorIndex(indexLastSeedPlaced, this.southPits.length-2)];
 				//fill treasure chest 
 				activePits[activePits.length-1] += activePits[indexLastSeedPlaced] + seedAmountInOppositePit; 
 				//empty the pits where you took the seeds from
-				activePits[indexLastSeedPlaced] = otherPits[getMirrorIndex(indexLastSeedPlaced, this.southPits.length-2)] = 0; 			} 
+				activePits[indexLastSeedPlaced] = otherPits[getMirrorIndex(indexLastSeedPlaced, this.southPits.length-2)] = 0;
+				
+			} 
 		}	
 	}
 	
@@ -300,5 +339,15 @@ public class State {
 		return "State [northPits=" + Arrays.toString(northPits)
 				+ ", southPits=" + Arrays.toString(southPits) + ", whoseTurn="
 				+ whoseTurn + ", gameOver=" + gameOver + "]";
+	}
+	
+	public State copyState() {
+		int[] cloneNorth = new int[this.northPits.length];
+		int[] cloneSouth = new int[this.northPits.length];
+		for(int i = 0; i < this.northPits.length; i++) {
+			cloneNorth[i] = this.northPits[i];
+			cloneSouth[i] = this.southPits[i];
+		}
+		return new State(cloneNorth, cloneSouth, this.whoseTurn, this.gameOver, this.lastMoveWasOppositeCapture, this.oppositeSeeds);
 	}
 }

@@ -30,13 +30,13 @@ public class Presenter {
 	    /**
 	     * The seedAmount will be placed on the right side at the correct index 
 	     */
-		void setSeeds(int index, PlayerColor side, int seedAmount);
+		void setSeeds(PlayerColor side, int col, int seedAmount);
 		
 		/**
 		 * A player can only select certain pits for their move. 
 		 * That's why some have to be enabled and some have to be disabled before a player's turn. 
 		 */
-		void setPitEnabled(int index, PlayerColor side, boolean enabled);/**
+		void setPitEnabled(PlayerColor side, int col, boolean enabled);/**
 		
 		/**
 		 * Informs the user of certain events. 
@@ -46,20 +46,26 @@ public class Presenter {
 	    void setMessage(String labelMsg, String HideBtnText, String restartBtnText);
 	    
 	    /**
-	     * Check if there was a previous game - if not return a new game
+	     * Animate seeds moving from one pit to an other
 	     */
-		State getPreviousGame();
-		
-		/**
-		 * Add a serialized State to the history so a user can undo and redo actions
-		 */
-	    void setHistoryNewItem(String serializedState);
-	    
-		/**
-		 * Add the ValueChangeHandler responsible for traversing the browser history
-		 */
-	    void addHistoryValueChangeHandler();
+	    void animateFromPitToPit(PlayerColor startSide, int startCol, PlayerColor endSide, int endCol, double delay, boolean finalAnimation);
 
+        /**
+         *  Cancel an animation (for if a game is loaded in the middle of an animation)
+         */
+        void cancelAnimation();
+        
+        /**
+         *  
+         */
+        void gameOverSound();
+        
+        void oppositeCaptureSound();
+        
+        /**
+         * 
+         */
+        void setWhoseTurn(PlayerColor side);
 	}
 	
 	/**
@@ -70,10 +76,7 @@ public class Presenter {
 	 */
 	public Presenter(View graphics) {
 		this.graphics = graphics;
-		state = graphics.getPreviousGame();
-		//the first newItem in History doesn't trigger the value change handler
-		graphics.setHistoryNewItem(serializeState(state));
-		graphics.addHistoryValueChangeHandler();
+		state = new State();
 		updateBoard();
 	}
 	
@@ -81,27 +84,26 @@ public class Presenter {
 	 * makes a move on the model, adds the new state to the history and updates the board
 	 */
 	void makeMove(int index) {
-		
 		try {
+			State oldState = state.copyState(); 
 			state.makeMove(index);
-			addHistoryTriggerBoardUpdate(state);
+			animateMove(index, oldState);
+			
+			//updatePits();
+			enableActiveSide();
+			disableZeroSeedPits();
+			message();
 		} 
 		catch (IllegalMoveException e) {
 			graphics.setMessage("New game because of error: " + e, "Okay", null);
-			addHistoryTriggerBoardUpdate(new State());
+			setState(new State());
 		} 
 		catch (GameOverException e) {
 			graphics.setMessage("New game because of error: " + e, "Okay", null);
-			addHistoryTriggerBoardUpdate(new State());
+			setState(new State());
 		}
 	}
-	
-	/**
-	 * When a new item is added to the history it triggers its value change handler in which the board will be updated
-	 */
-	void addHistoryTriggerBoardUpdate(State state){
-		graphics.setHistoryNewItem(serializeState(state));		
-	}
+
 
 	/**
 	 * Updates all elements that are necessary after the state changed
@@ -110,7 +112,7 @@ public class Presenter {
 	 * 3. When there are zero seeds in a pit it can't be chosen either so disable them
 	 * 4. Set a message in the case of game over
 	 */
-	private void updateBoard() {
+	void updateBoard() {
 		updatePits();
 		enableActiveSide();
 		disableZeroSeedPits();
@@ -125,17 +127,20 @@ public class Presenter {
 		boolean enableSouth;
 		
 		if(state.getWhoseTurn().isNorth()){
+			graphics.setWhoseTurn(PlayerColor.N);
 			enableNorth = true;
 			enableSouth = false;
+			
 		}
 		else {
+			graphics.setWhoseTurn(PlayerColor.S);
 			enableNorth = false;
 			enableSouth = true;
 		}		
 		
 		for(int i = 0; i < state.getNorthPits().length-1; i++){
-			graphics.setPitEnabled(i, PlayerColor.N, enableNorth);
-			graphics.setPitEnabled(i, PlayerColor.S, enableSouth);
+			graphics.setPitEnabled(PlayerColor.N, i, enableNorth);
+			graphics.setPitEnabled(PlayerColor.S, i, enableSouth);
 		}	
 	}
 
@@ -152,7 +157,7 @@ public class Presenter {
 		//state.getNorthPits().length-1 because the last array field is the treasure chest
 		for(int i = 0; i < state.getNorthPits().length-1; i++){
 			if(activePits[i] == 0)
-				graphics.setPitEnabled(i, state.getWhoseTurn(), false);			
+				graphics.setPitEnabled(state.getWhoseTurn(), i, false);			
 		}
 	}
 	
@@ -161,6 +166,8 @@ public class Presenter {
 	 */
 	void message(){
 		if (state.isGameOver() == true) {
+			graphics.gameOverSound();
+			
 			if(state.winner() == null){
 				graphics.setMessage("It's a tie!", "okay", "play again");
 			}
@@ -177,9 +184,43 @@ public class Presenter {
 	 */
 	private void updatePits() {
 		for(int i = 0; i < state.getNorthPits().length; i++){
-			graphics.setSeeds(i, PlayerColor.N, state.getNorthPits()[i]);
-			graphics.setSeeds(i, PlayerColor.S, state.getSouthPits()[i]);
+			graphics.setSeeds(PlayerColor.N, i, state.getNorthPits()[i]);
+			graphics.setSeeds(PlayerColor.S, i, state.getSouthPits()[i]);
 		}		
+	}
+
+	private void animateMove(int chosenPitIndex, State oldState) {
+		
+		PlayerColor whoseTurn = oldState.getWhoseTurn();
+		PlayerColor sideToPlaceSeedOn = whoseTurn;
+		int seedAmount = oldState.getPitsOfWhoseTurn()[chosenPitIndex];
+		boolean lastAnimation = false;
+		int indexToPlaceSeedIn = chosenPitIndex;
+		int maxIndex = 6;
+		for(int i = 1; i <= seedAmount; i++) {
+			indexToPlaceSeedIn++;
+			maxIndex = whoseTurn.equals(sideToPlaceSeedOn) ? 6 : 5;
+			if((indexToPlaceSeedIn) > maxIndex) {
+				sideToPlaceSeedOn = sideToPlaceSeedOn.getOpposite();
+				indexToPlaceSeedIn = 0;
+			}
+			if(i == seedAmount)
+				lastAnimation = true;
+			graphics.animateFromPitToPit(whoseTurn, chosenPitIndex, sideToPlaceSeedOn, indexToPlaceSeedIn, 400 * (i-1), lastAnimation);
+			
+		}
+		
+		if(this.state.getLastMoveWasOppositeCapture()) {
+			graphics.oppositeCaptureSound();
+			//I have to give this it's own animation down the line
+			
+//			//int[] opposingPits = whoseTurn.isNorth() ? this.state.getSouthPits() : state.getNorthPits();
+//			int seedAmountInOpposingPit = this.state.getOppositeSeeds();
+//
+//			graphics.animateFromPitToPit(whoseTurn, indexToPlaceSeedIn, whoseTurn, 6, seedAmount * 400 + 1400);
+//			for(int i = 0; i < seedAmountInOpposingPit; i++)
+//				graphics.animateFromPitToPit(whoseTurn.getOpposite(), State.getMirrorIndex(indexToPlaceSeedIn, 5), whoseTurn, 6, seedAmount * 400 + 1000 + 400 * i);
+		}
 	}
 	
 	void setState(State state) {
@@ -189,7 +230,7 @@ public class Presenter {
 	}
 
 	public void newGame() {		
-		addHistoryTriggerBoardUpdate(new State());
+		setState(new State());
 	}
 
     /**
