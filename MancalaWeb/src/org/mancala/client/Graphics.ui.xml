@@ -10,12 +10,13 @@
     }
   </ui:style>
   <g:HTMLPanel>
-    <g:HorizontalPanel ui:field="gameHorizontalPanel">
-      <g:Grid ui:field="treasureGridN"/>
-    	<g:Grid ui:field="gameGrid"/>
-    	<g:Grid ui:field="treasureGridS"/>
-    </g:HorizontalPanel>
     <g:PopupPanel ui:field="gamePopupPanel"/>
-    
+  	<g:Label ui:field="turnLabel"/>
+    <g:AbsolutePanel ui:field="gameAbsolutePanel"/>
+    <g:Label ui:field="warnLabel"/>
+    <g:Button ui:field="saveButton"/>
+    <g:Button ui:field="loadButton"/>  
+    <g:Label ui:field="dragMeLabel"/>   
+    <g:Label ui:field="dragOnToMeLabel"/>  
   </g:HTMLPanel>
 </ui:UiBinder> 

@@ -5,19 +5,30 @@ import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
 
+import com.google.gwt.core.client.Duration;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.event.logical.shared.ValueChangeEvent;
-import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.storage.client.Storage;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
-import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Grid;
-import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
@@ -28,7 +39,15 @@ import com.google.gwt.user.client.ui.Widget;
  * @author Micha Guthmann
  */
 public class Graphics extends Composite implements View{
-	//private static GameImages gameImages = GWT.create(GameImages.class);
+	final int TREASURE_CHEST_WIDTH = 66;
+	final int TREASURE_CHEST_HEIGHT = 172;
+	final int PIT_WIDTH = 66;
+	final int PIT_HEIGHT = 66;
+	final int PADDING = 20;
+
+	
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GameSounds gameSounds = GWT.create(GameSounds.class);
 	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
 	
 	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
@@ -39,26 +58,54 @@ public class Graphics extends Composite implements View{
 	 */
 	private final Presenter presenter;
 	
+	HandlerRegistration[][] handlerRegs = new HandlerRegistration[2][6];
+	
+	private SeedMovingAnimation animation;
+	
+	Audio dotSound;	
+	Audio gameOverSound;	
+	Audio applauseSound;
+	Audio oppositeCaptureSound;
+	
 	/**
 	 * Note: UI is proof of concept. I will add images and better layout in the next homeworks
 	 * The basis is a horizontal panel
 	 */
-	@UiField HorizontalPanel gameHorizontalPanel;
+	@UiField AbsolutePanel gameAbsolutePanel;
 	
 	/**
 	 * To the left is one treasure chest
 	 */
-	@UiField Grid treasureGridN;
+	Grid treasureGridN;
 	
 	/**
-	 * In the middle are the 12 pits the user can take action on
+	 * In the middle are 12 pits the user can take action on,...
 	 */
-	@UiField Grid gameGrid;
-	
+	Grid gameGrid;
+
 	/**
 	 * To the right is the other treasure chest
 	 */
-	@UiField Grid treasureGridS;
+	Grid treasureGridS;
+	
+	/**
+	 * 
+	 */
+	@UiField Label turnLabel;
+	
+	/**
+	 * 
+	 */
+	@UiField Label warnLabel;
+	
+	@UiField Button saveButton;
+	
+	@UiField Button loadButton;
+	
+	@UiField Label dragMeLabel;
+	
+	@UiField Label dragOnToMeLabel;
+	
 	
 	/**
 	 * To inform the user of certain events a PopupPabel will be used
@@ -67,119 +114,420 @@ public class Graphics extends Composite implements View{
 	
 	/**
 	 * Initializes the Graphics
-	 * To display the pits and seeds Buttons and their text is used. This is only a proof of concept.
 	 */
 	public Graphics() {
 	    initWidget(uiBinder.createAndBindUi(this));
 	    
-//	    Image image1 = new Image();
-//	    image1.setWidth("100%");
-//	    image1.setResource(gameImages.longTile());	  
-//
-//	    Image image2 = new Image();
-//	    image2.setWidth("100%");
-//	    image2.setResource(gameImages.longTile());
-	    
 	    treasureGridN = new Grid(1, 1);
-	    treasureGridN.setText(0, 0, "0");
-	    treasureGridN.setBorderWidth(20);
-	    treasureGridN.setCellPadding(50);
+	    treasureGridN.setHeight(TREASURE_CHEST_HEIGHT + PADDING * 2 + "px");
+	    treasureGridN.setCellPadding(PADDING);
+	    
 	    treasureGridS = new Grid(1, 1);
-	    treasureGridS.setText(0, 0, "0.0");
-	    treasureGridS.setBorderWidth(20);
-	    treasureGridS.setCellPadding(50);
+	    treasureGridS.setHeight(TREASURE_CHEST_HEIGHT + PADDING * 2 + "px");
+	    treasureGridS.setCellPadding(PADDING);
+	    
+	    AbsolutePanel treasurePanelN = new AbsolutePanel();
+	    treasurePanelN.setSize(TREASURE_CHEST_WIDTH + "px", TREASURE_CHEST_HEIGHT + "px");
+	    treasureGridN.setWidget(0, 0, treasurePanelN);
+	    
+	    AbsolutePanel treasurePanelS = new AbsolutePanel();
+	    treasurePanelS.setSize(TREASURE_CHEST_WIDTH + "px", TREASURE_CHEST_HEIGHT + "px");
+	    treasureGridS.setWidget(0, 0, treasurePanelS);
 	    
 	    gameGrid = new Grid(2, 6);
 	    gameGrid.resize(2, 6);
 	    for(int row = 0; row < 2; row++){
 	    	for(int col = 0; col < 6; col++){
-//	    		final Image image = new Image();
-//		        image.setWidth("100%");
-//		        image.setResource(gameImages.shortTile());
-	    		Button button = new Button("4");
-	    		
-	            final int colB = col;
+	    		AbsolutePanel pitPanel = new AbsolutePanel();
+        		pitPanel.setSize(PIT_WIDTH + "px", PIT_HEIGHT + "px");	
+        		
+        		addSeeds(pitPanel, 4);
+        		
 	            if(row == 0){
-	            	button.addClickHandler(new ClickHandler() {
-	    	          @Override
-	    	          public void onClick(ClickEvent event) {
-	    	            presenter.makeMove(colB);
-	    	          }
-	    	        });
-		    		button.setEnabled(false);
-		    		gameGrid.setWidget(row, 5-col, button);
+	            	final int colB = col;
+                	handlerRegs[row][col] = pitPanel.addDomHandler(new ClickHandler() {
+            	          @Override
+            	          public void onClick(ClickEvent event) {
+            	            presenter.makeMove(colB);
+            	          }
+            	        }, ClickEvent.getType());
+                	
+	            	gameGrid.setWidget(row, 5-col, pitPanel);
+	            	setPitEnabled(PlayerColor.NORTH, col, false);
 	            }
-	            else{
-	            	button.addClickHandler(new ClickHandler() {
-	    	          @Override
-	    	          public void onClick(ClickEvent event) {
-	    	            presenter.makeMove(colB);
-	    	          }
-	    	        });
-		    		gameGrid.setWidget(row, col, button);
+	            else{     		
+		            final int colB = col;
+                	handlerRegs[row][col] = pitPanel.addDomHandler(new ClickHandler() {
+            	          @Override
+            	          public void onClick(ClickEvent event) {
+            	            presenter.makeMove(colB);
+            	          }
+            	        }, ClickEvent.getType());
+
+            		gameGrid.setWidget(row, col, pitPanel);
+	            	setPitEnabled(PlayerColor.SOUTH, col, true);
 	            }
+	            
 	    	}
 	    }
 	    
-	    gameGrid.setCellPadding(50);
+	    gameGrid.setCellPadding(20);
 
-	    gameHorizontalPanel.add(treasureGridN);
-	    gameHorizontalPanel.add(gameGrid);
-	    gameHorizontalPanel.add(treasureGridS);
-
+	    gameAbsolutePanel.add(treasureGridN);
+	    gameAbsolutePanel.add(gameGrid, TREASURE_CHEST_WIDTH + 2 * PADDING, 0);
+	    gameAbsolutePanel.add(treasureGridS, TREASURE_CHEST_WIDTH + 14 * PADDING + PIT_WIDTH * 6 + 6 * 2, 0);
+	    gameAbsolutePanel.setSize(12 + TREASURE_CHEST_WIDTH * 2 + 16 * PADDING + PIT_WIDTH * 6 + "px", 
+	    		4 + 4 * PADDING + 2 * PIT_HEIGHT + "px");
+	    gameAbsolutePanel.getElement().getStyle().setProperty("margin", "auto");
+	    DOM.setStyleAttribute(gameAbsolutePanel.getElement(), "backgroundColor", "gray");
+	    Image bgImg = new Image();
+	    bgImg.setResource(gameImages.board());
+	    
+	    DOM.setStyleAttribute(gameAbsolutePanel.getElement(), "backgroundImage", "url("+bgImg.getUrl() +")");
+	    
 		presenter = new Presenter(this);
+		
+		turnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
+		warnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
+		
+		initializeAudios();
+		
+		initializeSaveAndLoad();
+		initializeDragAndDrop();
 	}
 	
+	
+	private void initializeDragAndDrop() {
+		dragMeLabel.setHeight(50+"px");
+	    
+		dragMeLabel.setText("The drag challenge: Try to drag me to the label below me.");
+		dragMeLabel.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+		// Add a DragStartHandler.
+		dragMeLabel.addDragStartHandler(new DragStartHandler() {
+			 public void onDragStart(DragStartEvent event) {
+				 // Required: set data for the event.
+				 event.setData("text", "That was awesome!");
+				 // Optional: show a copy of the widget under cursor.
+				 event.getDataTransfer().setDragImage(dragMeLabel.getElement(),
+				 10, 10);
+			 }
+		});
+		
+		dragOnToMeLabel.setText("--> Drag and drop it here <--");
+		DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "red");
+		// Required: You must add a DragOverHandler to
+		// create a target.
+		dragOnToMeLabel.addDragOverHandler(new DragOverHandler() {
+		 public void onDragOver(DragOverEvent event) {
+			 DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "gray");
+		 }
+		});
+		 
+		// Add a DropHandler.
+		dragOnToMeLabel.addDropHandler(new DropHandler() {
+			public void onDrop(DropEvent event) {
+				// Prevent the native text drop.
+				event.preventDefault();
+				// Get the data out of the event.
+				String data = event.getData("text");
+				dragOnToMeLabel.setText(data);
+				if(applauseSound != null)
+					applauseSound.play();
+				DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "red");
+			}
+
+		});
+	}
+
+
+	private void initializeSaveAndLoad() {
+		saveButton.setText("Save");
+		saveButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event) {
+				saveState();
+			}
+		});
+		
+		loadButton.setText("Load");
+		loadButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event) {
+				loadState();
+			}
+		});
+	}
+
+
+	private void initializeAudios() {
+		if (Audio.isSupported()) {
+            dotSound = Audio.createIfSupported();
+            dotSound.addSource(gameSounds.dotMp3().getSafeUri()
+                            .asString(), AudioElement.TYPE_MP3);
+            dotSound.addSource(gameSounds.dotWav().getSafeUri()
+                            .asString(), AudioElement.TYPE_WAV);
+            
+            gameOverSound = Audio.createIfSupported();
+            gameOverSound.addSource(gameSounds.gameOverMp3().getSafeUri()
+                            .asString(), AudioElement.TYPE_MP3);
+            gameOverSound.addSource(gameSounds.gameOverWav().getSafeUri()
+                            .asString(), AudioElement.TYPE_WAV);
+            
+            applauseSound = Audio.createIfSupported();
+            applauseSound.addSource(gameSounds.applauseMp3().getSafeUri()
+                            .asString(), AudioElement.TYPE_MP3);
+            applauseSound.addSource(gameSounds.applauseWav().getSafeUri()
+                            .asString(), AudioElement.TYPE_WAV);
+            
+            oppositeCaptureSound = Audio.createIfSupported();
+            oppositeCaptureSound.addSource(gameSounds.oppositeCaptureMp3().getSafeUri()
+                            .asString(), AudioElement.TYPE_MP3);
+            oppositeCaptureSound.addSource(gameSounds.oppositeCaptureWav().getSafeUri()
+                            .asString(), AudioElement.TYPE_WAV);
+		}
+	}
+
+
+	protected void loadState() {
+		Storage storage = Storage.getLocalStorageIfSupported();
+		if (storage != null) {
+			String value = storage.getItem("currentState");
+			presenter.setState(presenter.deserializeState(value));
+		}
+	}
+
+
+	protected void saveState() {
+		Storage storage = Storage.getLocalStorageIfSupported();
+		if (storage != null) {
+			storage.setItem("currentState", presenter.serializeState(presenter.state));
+		}
+	}
+
+
+	int[] getTargetPoint(int index) {
+
+		int[] point = new int[2];
+		
+		//the middle is supposed to be left out
+		if(index > 3) {
+			index++;
+		}
+		
+		if(index < 9) {
+			
+			//left
+			point[0] = (index % 3) * 22;
+			//top
+			point[1] = (index / 3) * 22;
+		}
+		else {
+			//if more than 8 seeds are in a pit it's only indicated by the number
+			//left
+			point[0] = (8 % 3) * 22;
+			//top
+			point[1] = (8 / 3) * 22;
+		}
+		
+		return point;
+	}
+	
+	int[] getTargetPointTreasureChest(int index) {
+		int[] point = new int[2];
+		
+		//the middle is supposed to be left out
+		if(index > 9) {
+			index++;
+		}
+		
+		if(index < 21) {
+			//left
+			point[0] = (index % 3) * 22;
+			//top
+			point[1] = (index / 3) * 22;
+		}
+		else {
+			//left
+			point[0] = (20 % 3) * 22;
+			//top
+			point[1] = (20 / 3) * 22;
+		}
+		
+		return point;
+	}
+	
+	private void addSeeds(AbsolutePanel pitPanel, int seedAmount) {
+		pitPanel.clear();
+		
+		for(int i = 0; i < seedAmount; i++){
+			final Image seed = new Image();
+	        seed.setResource(gameImages.redSeed());
+	        DOM.setStyleAttribute(seed.getElement(), "backgroundSize", "20px 20px");
+
+	        int[] point = getTargetPoint(i);
+			pitPanel.add(seed, point[0], point[1]);	
+		}	
+		Label countLabel = new Label(seedAmount + "");
+		countLabel.setWidth(PIT_WIDTH+"px");
+		countLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
+		pitPanel.add(countLabel, 0, 22);
+		
+	}
+	
+
+	private void addSeedsToTreasureChest(AbsolutePanel treasurePanel, int seedAmount) {
+		treasurePanel.clear();
+		
+		for(int i = 0; i < seedAmount; i++){
+			final Image seed = new Image();
+	        seed.setResource(gameImages.redSeed());
+	        DOM.setStyleAttribute(seed.getElement(), "backgroundSize", "20px 20px");
+
+	        int[] point = getTargetPointTreasureChest(i);
+			treasurePanel.add(seed, point[0], point[1]);	
+		}	
+		Label countLabel = new Label(seedAmount + "");
+		countLabel.setWidth(TREASURE_CHEST_WIDTH+"px");
+		countLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
+		treasurePanel.add(countLabel, 0, 22*3);
+	}
+
+
 	/**
 	 * The seedAmount will be placed on the right side at the correct index 
 	 */
 	@Override
-	public void setSeeds(int index, PlayerColor side, int seedAmount){
-		if(index < 6){
-			Button btn;
+	public void setSeeds(PlayerColor side, int col, int seedAmount){
+		if(col < 6){
+			AbsolutePanel pnl;
 			if(side.isNorth()){
-				btn = (Button) gameGrid.getWidget(0, State.getMirrorIndex(index, 5));
+				pnl = (AbsolutePanel) gameGrid.getWidget(0, State.getMirrorIndex(col, 5));
 			}
 			else if(side.isSouth()){
-				btn = (Button) gameGrid.getWidget(1, index);
+				pnl = (AbsolutePanel) gameGrid.getWidget(1, col);
 			}
 			else
 				throw new IllegalMoveException();
 			
-			btn.setText(""+seedAmount);
+			addSeeds(pnl, seedAmount);
 		}
-		else if(index == 6){
+		else if(col == 6){
+			AbsolutePanel pnl;
 			if(side.isNorth()){
-				treasureGridN.setText(0, 0, ""+seedAmount);
+				pnl = (AbsolutePanel) treasureGridN.getWidget(0, 0);
 			}
 			else if(side.isSouth()){
-				treasureGridS.setText(0, 0, ""+seedAmount);
+				pnl = (AbsolutePanel) treasureGridS.getWidget(0, 0);
 			}
 			else
 				throw new IllegalMoveException();
+			addSeedsToTreasureChest(pnl, seedAmount);
 		} else 
 			throw new IllegalMoveException();
 		
 	}
+	
+
+	/**
+	 * 
+	 */
+	@Override
+	public void animateFromPitToPit(PlayerColor startSide, int startCol, PlayerColor endSide, int endCol, double delay, boolean finalAnimation) {
+		int startRow = startSide.isNorth() ? 0 : 1;
+		int actualStartCol = (startRow == 0) ? 5 - startCol : startCol;
+		int endRow = endSide.isNorth() ? 0 : 1;
+		int actualEndCol = (endRow == 0) ? 5 - endCol : endCol;
+		
+		AbsolutePanel startPanel = (AbsolutePanel) gameGrid.getWidget(startRow, actualStartCol);
+		final Image seed;
+		seed = (Image) startPanel.getWidget(startPanel.getWidgetCount()-2);
+		int startXStartPanel = startPanel.getWidgetLeft(seed);
+		int startYStartPanel = startPanel.getWidgetTop(seed);
+        int startX = 2 + actualStartCol * 2 + TREASURE_CHEST_WIDTH + PIT_WIDTH * actualStartCol + PADDING * (actualStartCol * 2 + 3) + startXStartPanel;
+        int startY = 2 + PADDING + startRow * (PIT_HEIGHT + 2 * PADDING + 2) + startYStartPanel; 
+        
+		AbsolutePanel endPanel;
+        int[] endPointEndPanel;
+        int endXEndPanel;
+        int endYEndPanel;
+        int endX;
+        int endY;
+		if(endCol < 6) {
+			endPanel = (AbsolutePanel) gameGrid.getWidget(endRow, actualEndCol);
+	        endPointEndPanel = getTargetPoint(endPanel.getWidgetCount()-1);
+	        endXEndPanel = endPointEndPanel[0];
+	        endYEndPanel = endPointEndPanel[1];
+	        endX = 2 + actualEndCol * 2 + TREASURE_CHEST_WIDTH + PIT_WIDTH * actualEndCol + PADDING * (actualEndCol * 2 + 3) + endXEndPanel;
+	        endY = 2 + PADDING + endRow * (PIT_HEIGHT + 2 * PADDING + 2) + endYEndPanel;
+		}
+		else {
+			Grid hGrid = endRow == 0 ? treasureGridN : treasureGridS; 
+			endPanel = (AbsolutePanel) hGrid.getWidget(0, 0);
+	        endPointEndPanel = getTargetPointTreasureChest(endPanel.getWidgetCount()-1);
+	        endXEndPanel = endPointEndPanel[0];
+	        endYEndPanel = endPointEndPanel[1];
+	        endX = 2 + PADDING + (TREASURE_CHEST_WIDTH +  PIT_WIDTH * 6 + PADDING * 14 + 6 * 2) * endRow + endXEndPanel;
+	        endY = 2 + PADDING + endYEndPanel;
+		}
+
+        animation = new SeedMovingAnimation(seed, gameImages.redSeed(), startPanel, endPanel, startXStartPanel, startYStartPanel, endXEndPanel, endYEndPanel, startX, startY, endX, endY, finalAnimation, this, dotSound);
+        animation.run(1000, Duration.currentTimeMillis() + delay);
+	}
+	
 	
 	/**
 	 * A player can only select certain pits for their move. 
 	 * That's why some have to be enabled and some have to be disabled before a player's turn. 
 	 */
 	@Override
-	public void setPitEnabled(int index, PlayerColor side, boolean enabled) {
-		if(index < 6){
-			Button btn;
+	public void setPitEnabled(PlayerColor side, int col, boolean enabled) {
+		AbsolutePanel pnl;		
+		if(col < 6){
 			if(side.isNorth()){
-				btn = (Button) gameGrid.getWidget(0, State.getMirrorIndex(index, 5));
+				pnl = (AbsolutePanel) gameGrid.getWidget(0, State.getMirrorIndex(col, 5));
 			}
 			else if(side.isSouth()){
-				btn = (Button) gameGrid.getWidget(1, index);
+				pnl = (AbsolutePanel) gameGrid.getWidget(1, col);
 			}
 			else
 				throw new IllegalMoveException();
 			
-			btn.setEnabled(enabled);
+			final int colB = col;
+			int row = side.isNorth() ? 0 : 1;
+			
+			if(enabled) {
+				handlerRegs[row][col].removeHandler();
+				handlerRegs[row][col] = pnl.addDomHandler(new ClickHandler() {
+	    	          @Override
+	    	          public void onClick(ClickEvent event) {
+	    	            presenter.makeMove(colB);
+	    	            warnLabel.setText("");
+	    	          }
+	    	        }, ClickEvent.getType());
+			}
+			else {		
+				handlerRegs[row][col].removeHandler();
+				handlerRegs[row][col] = pnl.addDomHandler(new ClickHandler() {
+	    	          @Override
+	    	          public void onClick(ClickEvent event) {
+	    	            warnLabel.setText("You can only choose one of your own pits where at least one seed is in!");
+	    	          }
+	    	        }, ClickEvent.getType());
+			}	
+			
+			
+//			
+//			AbsolutePanel pnl;
+//			if(side.isNorth()){
+//				pnl = (AbsolutePanel) gameGrid.getWidget(0, State.getMirrorIndex(index, 5));
+//			}
+//			else if(side.isSouth()){
+//				pnl = (AbsolutePanel) gameGrid.getWidget(1, index);
+//			}
+//			else
+//				throw new IllegalMoveException();
+			
+			//setPitPanelEnabled(pnl, enabled, );
 		}
 	}
 
@@ -207,71 +555,62 @@ public class Graphics extends Composite implements View{
 			playAgainButton.addClickHandler(new ClickHandler() {
 	          @Override
 	          public void onClick(ClickEvent event) {
-	        	  gamePopupPanel.hide();
 	        	  presenter.newGame();
+	        	  gamePopupPanel.hide();
 	          }
 	        });
 			vPanel.add(playAgainButton);
 		}
 		
-		gamePopupPanel = new PopupPanel();
+		gamePopupPanel.clear();
 		gamePopupPanel.setAutoHideEnabled(true);
+		gamePopupPanel.add(vPanel);	
 		gamePopupPanel.setPopupPositionAndShow(new PopupPanel.PositionCallback() {
 	          public void setPosition(int offsetWidth, int offsetHeight) {
 	              int left = (Window.getClientWidth() - offsetWidth) / 3;
 	              int top = (Window.getClientHeight() - offsetHeight) / 3;
 	              gamePopupPanel.setPopupPosition(left, top);
 	            }
-	          });
-		gamePopupPanel.add(vPanel);		
+	          });	
+	}
+
+	@Override
+	public void cancelAnimation() {
+	    if (animation != null) {
+	            animation.cancel();
+	            animation = null;
+	    }
+    }
+	
+	@Override
+	public void gameOverSound() {
+		if (gameOverSound != null)
+			gameOverSound.play();
 	}
 	
-	/**
-	 * Check if there was a previous game - if not return a new game
-	 * Look at the url fragment and try to deserialize a state
-	 */
 	@Override
-	public State getPreviousGame() {
-		String urlFragment = Window.Location.getHash();
-		State newState = new State();
-		if(urlFragment != "" && urlFragment != null && urlFragment.length() > 1){
-			try {
-				newState = presenter.deserializeState(urlFragment.substring(1, urlFragment.length()));
-			}
-			catch (Exception e) {
-				setMessage("New game because of error: " + e, "Okay", null);
-				newState = new State();
-			}
-		}
-		return newState;
+	public void oppositeCaptureSound() {
+		if (oppositeCaptureSound != null)
+			oppositeCaptureSound.play();
 	}
 
-	/**
-	 * Add a serialized State to the history so a user can undo and redo actions
-	 */
 	@Override
-	public void setHistoryNewItem(String serializedState) {
-		History.newItem(serializedState);
+	public void setWhoseTurn(PlayerColor side) {
+		if(side.isNorth())
+			turnLabel.setText("It is Norths turn");
+		else if(side.isSouth())
+			turnLabel.setText("It is Souths turn");
+		else
+			turnLabel.setText("The game is over");
+	}
+
+	public void afterFinalAnimation() {
+		updateBoard();
+	}
+	
+	public void updateBoard() {
+		presenter.updateBoard();
 	}
 
 
-	/**
-	 * Add the ValueChangeHandler responsible for traversing the browser history
-	 */
-    public void addHistoryValueChangeHandler() {
-            History.addValueChangeHandler(new ValueChangeHandler<String> () {
-                    @Override
-                    public void onValueChange(ValueChangeEvent<String> event) {
-                    	try{
-                    		String historyToken = event.getValue();
-                            presenter.setState(presenter.deserializeState(historyToken));
-                    	}
-                        catch(Exception e) {
-                        	setMessage("New game because of error: " + e, "Okay", null);
-                        	presenter.addHistoryTriggerBoardUpdate(new State());
-                        }
-                    }
-            });
-    }
-    
 }

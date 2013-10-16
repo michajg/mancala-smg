@@ -261,5 +261,76 @@ public class StateTest {
 		
 		assertEquals("South provokes GameOver: ", expectedState, testState);
 	}
-
+	
+	@Test
+	public void testMoveCaptureOpposingSeedsSouthFlagTest() {
+		//If the last seed of a move landed on an empty pit on your side and there are some seeds in the opposite pit, 
+		//then the seeds in the two cups will be captured in your treasure chest
+		int[] northPits = {2, 2, 4, 2, 2, 2, 12};
+		int[] southPits = {2, 2, 2, 0, 2, 2, 12};
+		State testState = new State(northPits, southPits, PlayerColor.SOUTH, false, false);
+		testState.makeMove(1);
+		
+		int[] expectedNorthPits = {2, 2, 0, 2, 2, 2, 12};
+		int[] expectedSouthPits = {2, 0, 3, 0, 2, 2, 17};
+		boolean expectedGameOver = false;
+		boolean expectedLastMoveWasOppositeCapture = true;
+		State expectedState = new State(expectedNorthPits, expectedSouthPits, PlayerColor.NORTH, expectedGameOver, expectedLastMoveWasOppositeCapture);
+		
+		assertEquals("From custom south takes index 1 seeds: ", expectedState.getLastMoveWasOppositeCapture(), testState.getLastMoveWasOppositeCapture());
+	}
+	
+	@Test
+	public void testMoveCaptureOpposingSeedsNorthFlagTest() {
+		//If the last seed of a move landed on an empty pit on your side and there are some seeds in the opposite pit, 
+		//then the seeds in the two cups will be captured in your treasure chest
+		int[] northPits = {2, 2, 2, 0, 2, 2, 12};
+		int[] southPits = {2, 2, 4, 2, 2, 2, 12};
+		State testState = new State(northPits, southPits, PlayerColor.NORTH);
+		testState.makeMove(1);
+		
+		int[] expectedNorthPits = {2, 0, 3, 0, 2, 2, 17};
+		int[] expectedSouthPits = {2, 2, 0, 2, 2, 2, 12};
+		boolean expectedGameOver = false;
+		boolean expectedLastMoveWasOppositeCapture = true;
+		State expectedState = new State(expectedNorthPits, expectedSouthPits, PlayerColor.SOUTH,expectedGameOver, expectedLastMoveWasOppositeCapture);
+		
+		assertEquals("From custom south takes index 1 seeds: ", expectedState.getLastMoveWasOppositeCapture(), testState.getLastMoveWasOppositeCapture());
+	}
+	
+	@Test
+	public void testMoveNoCaptureOpposingSeedsSouthFlagTest() {
+		//If the last seed of a move landed on an empty pit on your side and there are some seeds in the opposite pit, 
+		//then the seeds in the two cups will be captured in your treasure chest
+		int[] northPits = {2, 2, 0, 2, 2, 2, 16};
+		int[] southPits = {2, 2, 2, 0, 2, 2, 12};
+		State testState = new State(northPits, southPits, PlayerColor.SOUTH, false, false);
+		testState.makeMove(1);
+		
+		int[] expectedNorthPits = {2, 2, 0, 2, 2, 2, 16};
+		int[] expectedSouthPits = {2, 0, 3, 1, 2, 2, 12};
+		boolean expectedGameOver = false;
+		boolean expectedLastMoveWasOppositeCapture = false;
+		State expectedState = new State(expectedNorthPits, expectedSouthPits, PlayerColor.NORTH, expectedGameOver, expectedLastMoveWasOppositeCapture);
+		
+		assertEquals("From custom south takes index 1 seeds: ", expectedState.getLastMoveWasOppositeCapture(), testState.getLastMoveWasOppositeCapture());
+	}
+	
+	@Test
+	public void testMoveNoCaptureOpposingSeedsNorthFlagTest() {
+		//If the last seed of a move landed on an empty pit on your side and there are some seeds in the opposite pit, 
+		//then the seeds in the two cups will be captured in your treasure chest
+		int[] northPits = {2, 2, 2, 1, 2, 2, 11};
+		int[] southPits = {2, 2, 4, 2, 2, 2, 12};
+		State testState = new State(northPits, southPits, PlayerColor.NORTH);
+		testState.makeMove(1);
+		
+		int[] expectedNorthPits = {2, 0, 3, 2, 2, 2, 11};
+		int[] expectedSouthPits = {2, 2, 4, 2, 2, 2, 12};
+		boolean expectedGameOver = false;
+		boolean expectedLastMoveWasOppositeCapture = false;
+		State expectedState = new State(expectedNorthPits, expectedSouthPits, PlayerColor.SOUTH,expectedGameOver, expectedLastMoveWasOppositeCapture);
+		
+		assertEquals("From custom south takes index 1 seeds: ", expectedState.getLastMoveWasOppositeCapture(), testState.getLastMoveWasOppositeCapture());
+	}
 }

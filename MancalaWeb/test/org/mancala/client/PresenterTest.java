@@ -19,7 +19,6 @@ public class PresenterTest {
 	@Before
     public void setup(){
 		graphics = Mockito.mock(Presenter.View.class);
-        Mockito.when(graphics.getPreviousGame()).thenReturn(new State());
         presenter = new Presenter(graphics);
 //      HasClickHandlers dummyResetButton = Mockito.mock(HasClickHandlers.class);
     }
@@ -29,21 +28,21 @@ public class PresenterTest {
 	 */
 	@Test
 	public void testInitialSetPits(){
-		Mockito.verify(graphics).setSeeds(0, PlayerColor.S, 4);
-		Mockito.verify(graphics).setSeeds(1, PlayerColor.S, 4);
-		Mockito.verify(graphics).setSeeds(2, PlayerColor.S, 4);
-		Mockito.verify(graphics).setSeeds(3, PlayerColor.S, 4);
-		Mockito.verify(graphics).setSeeds(4, PlayerColor.S, 4);
-		Mockito.verify(graphics).setSeeds(5, PlayerColor.S, 4);
-		Mockito.verify(graphics).setSeeds(6, PlayerColor.S, 0);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 0, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 1, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 2, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 3, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 4, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 5, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 6, 0);
 		
-		Mockito.verify(graphics).setSeeds(0, PlayerColor.N, 4);
-		Mockito.verify(graphics).setSeeds(1, PlayerColor.N, 4);
-		Mockito.verify(graphics).setSeeds(2, PlayerColor.N, 4);
-		Mockito.verify(graphics).setSeeds(3, PlayerColor.N, 4);
-		Mockito.verify(graphics).setSeeds(4, PlayerColor.N, 4);
-		Mockito.verify(graphics).setSeeds(5, PlayerColor.N, 4);
-		Mockito.verify(graphics).setSeeds(6, PlayerColor.N, 0);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 0, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 1, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 2, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 3, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 4, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 5, 4);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 6, 0);
 	}
 	
 	/**
@@ -58,29 +57,21 @@ public class PresenterTest {
 		
 		presenter.setState(presenter.state);
 		
-		Mockito.verify(graphics).setSeeds(0, PlayerColor.S, 3);
-		Mockito.verify(graphics).setSeeds(1, PlayerColor.S, 3);
-		Mockito.verify(graphics).setSeeds(2, PlayerColor.S, 3);
-		Mockito.verify(graphics).setSeeds(3, PlayerColor.S, 3);
-		Mockito.verify(graphics).setSeeds(4, PlayerColor.S, 3);
-		Mockito.verify(graphics).setSeeds(5, PlayerColor.S, 3);
-		Mockito.verify(graphics).setSeeds(6, PlayerColor.S, 6);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 0, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 1, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 2, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 3, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 4, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 5, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.S, 6, 6);
 		
-		Mockito.verify(graphics).setSeeds(0, PlayerColor.N, 3);
-		Mockito.verify(graphics).setSeeds(1, PlayerColor.N, 3);
-		Mockito.verify(graphics).setSeeds(2, PlayerColor.N, 3);
-		Mockito.verify(graphics).setSeeds(3, PlayerColor.N, 3);
-		Mockito.verify(graphics).setSeeds(4, PlayerColor.N, 3);
-		Mockito.verify(graphics).setSeeds(5, PlayerColor.N, 3);
-		Mockito.verify(graphics).setSeeds(6, PlayerColor.N, 6);
-	}
-
-	/**
-	 * Because of the setUp() method there should be calls to set the initial History
-	 */
-	@Test
-	public void testInitialAddHistoryTriggerBoardUpdate(){
-		Mockito.verify(graphics).setHistoryNewItem(presenter.serializeState(presenter.state));
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 0, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 1, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 2, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 3, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 4, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 5, 3);
+		Mockito.verify(graphics).setSeeds(PlayerColor.N, 6, 6);
 	}
 	
 	/**
@@ -89,24 +80,9 @@ public class PresenterTest {
 	@Test
 	public void testEnableInitialSouthSide(){
 		for(int i = 0; i < 6; i++){
-			Mockito.verify(graphics).setPitEnabled(i, PlayerColor.N, false);
-			Mockito.verify(graphics).setPitEnabled(i, PlayerColor.S, true);
+			Mockito.verify(graphics).setPitEnabled(PlayerColor.N, i, false);
+			Mockito.verify(graphics).setPitEnabled(PlayerColor.S, i, true);
 		}
-	}
-	
-	/**
-	 * Every time the presenter wants to add to the history the setHistoryNewItem method in graphics should be called
-	 */
-	@Test
-	public void testAnotherAddHistoryTriggerBoardUpdate(){
-		int[] northPits = new int[]{3,3,3,3,3,3,6};
-		int[] southPits = new int[]{3,3,3,3,3,3,6};
-		PlayerColor whoseTurn = PlayerColor.S;
-		presenter.state = new State(northPits, southPits, whoseTurn);
-		
-		presenter.addHistoryTriggerBoardUpdate(presenter.state);
-		
-		Mockito.verify(graphics).setHistoryNewItem(presenter.serializeState(presenter.state));
 	}
 	
 	/**
@@ -122,8 +98,8 @@ public class PresenterTest {
 		presenter.enableActiveSide();
 
 		for(int i = 0; i < 6; i++){
-			Mockito.verify(graphics).setPitEnabled(i, PlayerColor.N, true);
-			Mockito.verify(graphics).setPitEnabled(i, PlayerColor.S, false);
+			Mockito.verify(graphics).setPitEnabled(PlayerColor.N, i, true);
+			Mockito.verify(graphics).setPitEnabled(PlayerColor.S, i, false);
 		}
 	}
 	
@@ -141,22 +117,22 @@ public class PresenterTest {
 
 		//Because of initial call in presenter constructor this should be the second time
 		//that these north pits are disabled
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(0, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(2)).setPitEnabled(1, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(2, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(3, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(2)).setPitEnabled(4, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(5, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(6, PlayerColor.N, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 0, false);
+		Mockito.verify(graphics, Mockito.times(2)).setPitEnabled(PlayerColor.N, 1, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 2, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 3, false);
+		Mockito.verify(graphics, Mockito.times(2)).setPitEnabled(PlayerColor.N, 4, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 5, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.N, 6, false);
 		
-		//because of active player = north all south pits should be set to false once
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(0, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(1, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(2, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(3, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(4, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(5, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(6, PlayerColor.S, false);
+		//because of active player = north all south pits should never be set to false
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 0, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 1, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 2, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 3, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 4, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 5, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 6, false);
 	}
 	
 	/**
@@ -172,22 +148,22 @@ public class PresenterTest {
 		presenter.disableZeroSeedPits();
 
 		//Because of initial call in presenter constructor north pits were disabled once
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(0, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(1, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(2, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(3, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(4, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(5, PlayerColor.N, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(6, PlayerColor.N, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 0, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 1, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 2, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 3, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 4, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.N, 5, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.N, 6, false);
 		
 		//only the pits with 0 seeds should be disabled
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(0, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(1, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(2, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(3, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(4, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(5, PlayerColor.S, false);
-		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(6, PlayerColor.S, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 0, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.S, 1, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 2, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 3, false);
+		Mockito.verify(graphics, Mockito.times(1)).setPitEnabled(PlayerColor.S, 4, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 5, false);
+		Mockito.verify(graphics, Mockito.times(0)).setPitEnabled(PlayerColor.S, 6, false);
 	}
 	
 	/**
@@ -269,7 +245,21 @@ public class PresenterTest {
 		presenter.newGame();
 		
 		//It should be called two times - 1 for the initial call and 1 for the newGame call
-		Mockito.verify(graphics, Mockito.times(2)).setHistoryNewItem(presenter.serializeState(new State()));
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 0, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 1, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 2, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 3, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 4, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 5, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.S, 6, 0);
+		
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 0, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 1, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 2, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 3, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 4, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 5, 4);
+		Mockito.verify(graphics, Mockito.times(2)).setSeeds(PlayerColor.N, 6, 0);
 	}
 	
 	/**
