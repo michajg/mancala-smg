@@ -58,18 +58,27 @@ public class Graphics extends Composite implements View{
 	 */
 	private final Presenter presenter;
 	
+	/**
+	 * This is so that if it's not a users turn the click handlers can be taken away from the pits
+	 */
 	HandlerRegistration[][] handlerRegs = new HandlerRegistration[2][6];
 	
+	/**
+	 * An animation to distribute the seeds
+	 */
 	private SeedMovingAnimation animation;
 	
+	/**
+	 * The audio sounds that are used in the game
+	 */
 	Audio dotSound;	
 	Audio gameOverSound;	
 	Audio applauseSound;
 	Audio oppositeCaptureSound;
 	
 	/**
-	 * Note: UI is proof of concept. I will add images and better layout in the next homeworks
-	 * The basis is a horizontal panel
+	 * Note: UI is still proof of concept. I will add better images and better layout in the next homeworks
+	 * The basis is an absolute panel
 	 */
 	@UiField AbsolutePanel gameAbsolutePanel;
 	
@@ -89,23 +98,32 @@ public class Graphics extends Composite implements View{
 	Grid treasureGridS;
 	
 	/**
-	 * 
+	 * Keeps track of who has to make the next turn
 	 */
 	@UiField Label turnLabel;
 	
 	/**
-	 * 
+	 * Warns the user for example if he clicked on a pit he is not allowed to choose 
 	 */
 	@UiField Label warnLabel;
 	
+	/**
+	 * For saving 
+	 */
 	@UiField Button saveButton;
-	
+	/**
+	 * For laoding 
+	 */
 	@UiField Button loadButton;
 	
+	/**
+	 * For drag 
+	 */
 	@UiField Label dragMeLabel;
-	
+	/**
+	 * For drop
+	 */
 	@UiField Label dragOnToMeLabel;
-	
 	
 	/**
 	 * To inform the user of certain events a PopupPabel will be used
@@ -205,9 +223,7 @@ public class Graphics extends Composite implements View{
 		// Add a DragStartHandler.
 		dragMeLabel.addDragStartHandler(new DragStartHandler() {
 			 public void onDragStart(DragStartEvent event) {
-				 // Required: set data for the event.
 				 event.setData("text", "That was awesome!");
-				 // Optional: show a copy of the widget under cursor.
 				 event.getDataTransfer().setDragImage(dragMeLabel.getElement(),
 				 10, 10);
 			 }
@@ -215,8 +231,7 @@ public class Graphics extends Composite implements View{
 		
 		dragOnToMeLabel.setText("--> Drag and drop it here <--");
 		DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "red");
-		// Required: You must add a DragOverHandler to
-		// create a target.
+		
 		dragOnToMeLabel.addDragOverHandler(new DragOverHandler() {
 		 public void onDragOver(DragOverEvent event) {
 			 DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "gray");
@@ -239,7 +254,6 @@ public class Graphics extends Composite implements View{
 		});
 	}
 
-
 	private void initializeSaveAndLoad() {
 		saveButton.setText("Save");
 		saveButton.addClickHandler(new ClickHandler(){
@@ -257,7 +271,6 @@ public class Graphics extends Composite implements View{
 			}
 		});
 	}
-
 
 	private void initializeAudios() {
 		if (Audio.isSupported()) {
@@ -287,7 +300,9 @@ public class Graphics extends Composite implements View{
 		}
 	}
 
-
+	/**
+	 * Loads a state from local storage
+	 */
 	protected void loadState() {
 		Storage storage = Storage.getLocalStorageIfSupported();
 		if (storage != null) {
@@ -295,16 +310,23 @@ public class Graphics extends Composite implements View{
 			presenter.setState(presenter.deserializeState(value));
 		}
 	}
-
-
+	
+	/**
+	 * saves a state to locale storage
+	 */
 	protected void saveState() {
 		Storage storage = Storage.getLocalStorageIfSupported();
 		if (storage != null) {
 			storage.setItem("currentState", presenter.serializeState(presenter.state));
 		}
 	}
-
-
+	
+	/**
+	 * This calculates the x and the y value where in a pit a seed should be placed
+	 * 
+	 * @param index in which place should the seed be placed 
+	 * @return an int[] array - [0] will contain x value, [1] will contain y value
+	 */
 	int[] getTargetPoint(int index) {
 
 		int[] point = new int[2];
@@ -332,6 +354,12 @@ public class Graphics extends Composite implements View{
 		return point;
 	}
 	
+	/**
+	 * The treasure chests have their own method to calculate the x and y values 
+	 * 
+	 * @param index in which place should the seed be placed 
+	 * @return an int[] array - [0] will contain x value, [1] will contain y value
+	 */
 	int[] getTargetPointTreasureChest(int index) {
 		int[] point = new int[2];
 		
@@ -356,6 +384,12 @@ public class Graphics extends Composite implements View{
 		return point;
 	}
 	
+	/**
+	 * Add the seed images to a pit absolutePanel
+	 * 
+	 * @param pitPanel where the seeds are being placed in
+	 * @param seedAmount how many seeds are being placed into the pit
+	 */
 	private void addSeeds(AbsolutePanel pitPanel, int seedAmount) {
 		pitPanel.clear();
 		
@@ -374,7 +408,12 @@ public class Graphics extends Composite implements View{
 		
 	}
 	
-
+	/**
+	 * The treasureChests have their own method to place seeds in
+	 * 
+	 * @param treasurePanel where the seeds are being placed in
+	 * @param seedAmount how many seeds are being placed into the pit
+	 */
 	private void addSeedsToTreasureChest(AbsolutePanel treasurePanel, int seedAmount) {
 		treasurePanel.clear();
 		
@@ -429,7 +468,7 @@ public class Graphics extends Composite implements View{
 	
 
 	/**
-	 * 
+	 * To animate a seed from one pit to another
 	 */
 	@Override
 	public void animateFromPitToPit(PlayerColor startSide, int startCol, PlayerColor endSide, int endCol, double delay, boolean finalAnimation) {
@@ -496,6 +535,8 @@ public class Graphics extends Composite implements View{
 			int row = side.isNorth() ? 0 : 1;
 			
 			if(enabled) {
+				//the handerRegs keeps track of all click handlers of the pits
+				//by removing it from this array the handler is removed from the pit (absolutePanel) as well
 				handlerRegs[row][col].removeHandler();
 				handlerRegs[row][col] = pnl.addDomHandler(new ClickHandler() {
 	    	          @Override
@@ -514,7 +555,6 @@ public class Graphics extends Composite implements View{
 	    	          }
 	    	        }, ClickEvent.getType());
 			}	
-			
 			
 //			
 //			AbsolutePanel pnl;
@@ -604,6 +644,11 @@ public class Graphics extends Composite implements View{
 			turnLabel.setText("The game is over");
 	}
 
+	/**
+	 * Every time the last seed is placed in a pit update the game board
+	 * This is a safety precaution that the UI state does not solely rely on the correct animation,
+	 * so the model is questioned again for the correct amount of seeds everywhere
+	 */
 	public void afterFinalAnimation() {
 		updateBoard();
 	}
