@@ -7,25 +7,83 @@ import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.Image;
 
+/**
+ * The animation to send one seed from one pit to another.
+ * 
+ * It works like this: 
+ * 1. Remove the seed image from its parent pit panel
+ * 2. Add it to the underlying absolute panel at the exact same position
+ *    (the absolute panel that is more or less the root for every UI element in the game)
+ * 3. Animate inside this absolute panel to the target point
+ * 4. Remove Image from parent again
+ * 5. Add seed image to the target pit panel
+ * 
+ * @author Micha Guthmann
+ */
 public class SeedMovingAnimation extends Animation {
 
+	/**
+	 * The seed being animated
+	 */
     final Image seed;
+    /**
+     * the panel from where the seed is animatin in (the root panel)
+     */
     AbsolutePanel panel;
+    /**
+     * Animate the seed from this panel
+     */
     AbsolutePanel startPanel;
+    /**
+     * Animate the seed to this panel
+     */
     AbsolutePanel endPanel;
+    /**
+     * If the animation is changing the dimension of the seed this is needed
+     */
     int startWidth; 
+    /**
+     * If the animation is changing the dimension of the seed this is needed
+     */
     int startHeight;
+    /**
+     * x value where seed lies in the start panel
+     */
     int startXStartPanel;
+    /**
+     * y value where seed lies in the start panel
+     */
     int startYStartPanel;
+    /**
+     * x value where seed will start in the root panel
+     */
     int startX;
+    /**
+     * y value where seed will start in the root panel
+     */
     int startY;
+    /**
+     * x value where seed will end in the root panel
+     */
 	int endX;
+	/**
+     * x value where seed will end in the root panel
+     */
 	int endY; 
+	/**
+     * x value where seed will lie in the end panel
+     */
 	int endXEndPanel;
+	/**
+     * y value where seed will lie in the end panel
+     */
 	int endYEndPanel;
 	
 	Audio soundAtEnd;
 	boolean cancelled;
+	/**
+	 * keeps track is this is the last animation of a turn
+	 */
 	boolean finalAnimation;
 	Graphics graphics;
         
@@ -59,6 +117,9 @@ public class SeedMovingAnimation extends Animation {
         
     }
 
+    /**
+     * Play a sound at the start of the animation
+     */
     @Override
     protected void onStart() {
     	 super.onStart();

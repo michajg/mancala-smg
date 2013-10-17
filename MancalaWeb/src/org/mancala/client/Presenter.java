@@ -56,14 +56,17 @@ public class Presenter {
         void cancelAnimation();
         
         /**
-         *  
+         *  Plays a sound for the event of a game finishing
          */
         void gameOverSound();
         
+        /**
+         *  Plays a sound for the event of catching seeds from the opposite pit
+         */
         void oppositeCaptureSound();
         
         /**
-         * 
+         * Show the user who's turn it is somehow
          */
         void setWhoseTurn(PlayerColor side);
 	}
@@ -189,6 +192,12 @@ public class Presenter {
 		}		
 	}
 
+	/**
+	 * After the user clicked on a pit the seeds should be distributed in an animated fashion
+	 * 
+	 * @param chosenPitIndex the index the user chose to distribute the seeds from
+	 * @param oldState the state before the user chose his pit
+	 */
 	private void animateMove(int chosenPitIndex, State oldState) {
 		
 		PlayerColor whoseTurn = oldState.getWhoseTurn();

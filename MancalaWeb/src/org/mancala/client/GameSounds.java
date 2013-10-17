@@ -4,12 +4,6 @@ import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.DataResource;
 
 public interface GameSounds extends ClientBundle {
-
-//	@Source("boing_spring.mp3")
-//    DataResource dotMp3();
-//
-//    @Source("boing_spring.wav")
-//    DataResource dotWav();
     
     @Source("click_x.mp3")
     DataResource dotMp3();
