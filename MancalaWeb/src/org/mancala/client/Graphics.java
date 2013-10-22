@@ -8,22 +8,13 @@ import org.mancala.shared.State;
 import com.google.gwt.core.client.Duration;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.AudioElement;
-import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.event.dom.client.DragOverEvent;
-import com.google.gwt.event.dom.client.DragOverHandler;
-import com.google.gwt.event.dom.client.DragStartEvent;
-import com.google.gwt.event.dom.client.DragStartHandler;
-import com.google.gwt.event.dom.client.DropEvent;
-import com.google.gwt.event.dom.client.DropHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.media.client.Audio;
-import com.google.gwt.storage.client.Storage;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
@@ -56,7 +47,7 @@ public class Graphics extends Composite implements View{
 	/**
 	 * The MVP-Presenter 
 	 */
-	private final Presenter presenter;
+	final Presenter presenter;
 	
 	/**
 	 * This is so that if it's not a users turn the click handlers can be taken away from the pits
@@ -72,8 +63,7 @@ public class Graphics extends Composite implements View{
 	 * The audio sounds that are used in the game
 	 */
 	Audio dotSound;	
-	Audio gameOverSound;	
-	Audio applauseSound;
+	Audio gameOverSound;
 	Audio oppositeCaptureSound;
 	
 	/**
@@ -108,22 +98,9 @@ public class Graphics extends Composite implements View{
 	@UiField Label warnLabel;
 	
 	/**
-	 * For saving 
+	 * displays who the user is, which side he plays on and sometimes how the opponent is called
 	 */
-	@UiField Button saveButton;
-	/**
-	 * For laoding 
-	 */
-	@UiField Button loadButton;
-	
-	/**
-	 * For drag 
-	 */
-	@UiField Label dragMeLabel;
-	/**
-	 * For drop
-	 */
-	@UiField Label dragOnToMeLabel;
+	@UiField Label userLabel;
 	
 	/**
 	 * To inform the user of certain events a PopupPabel will be used
@@ -197,7 +174,8 @@ public class Graphics extends Composite implements View{
 	    gameAbsolutePanel.setSize(12 + TREASURE_CHEST_WIDTH * 2 + 16 * PADDING + PIT_WIDTH * 6 + "px", 
 	    		4 + 4 * PADDING + 2 * PIT_HEIGHT + "px");
 	    gameAbsolutePanel.getElement().getStyle().setProperty("margin", "auto");
-	    DOM.setStyleAttribute(gameAbsolutePanel.getElement(), "backgroundColor", "gray");
+	   
+	    DOM.setStyleAttribute(gameAbsolutePanel.getElement(), "backgroundColor", "#b0c4de");
 	    Image bgImg = new Image();
 	    bgImg.setResource(gameImages.board());
 	    
@@ -207,71 +185,11 @@ public class Graphics extends Composite implements View{
 		
 		turnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
 		warnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
+		userLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
 		
 		initializeAudios();
-		
-		initializeSaveAndLoad();
-		initializeDragAndDrop();
 	}
 	
-	
-	private void initializeDragAndDrop() {
-		dragMeLabel.setHeight(50+"px");
-	    
-		dragMeLabel.setText("The drag challenge: Try to drag me to the label below me.");
-		dragMeLabel.getElement().setDraggable(Element.DRAGGABLE_TRUE);
-		// Add a DragStartHandler.
-		dragMeLabel.addDragStartHandler(new DragStartHandler() {
-			 public void onDragStart(DragStartEvent event) {
-				 event.setData("text", "That was awesome!");
-				 event.getDataTransfer().setDragImage(dragMeLabel.getElement(),
-				 10, 10);
-			 }
-		});
-		
-		dragOnToMeLabel.setText("--> Drag and drop it here <--");
-		DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "red");
-		
-		dragOnToMeLabel.addDragOverHandler(new DragOverHandler() {
-		 public void onDragOver(DragOverEvent event) {
-			 DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "gray");
-		 }
-		});
-		 
-		// Add a DropHandler.
-		dragOnToMeLabel.addDropHandler(new DropHandler() {
-			public void onDrop(DropEvent event) {
-				// Prevent the native text drop.
-				event.preventDefault();
-				// Get the data out of the event.
-				String data = event.getData("text");
-				dragOnToMeLabel.setText(data);
-				if(applauseSound != null)
-					applauseSound.play();
-				DOM.setStyleAttribute(dragOnToMeLabel.getElement(), "backgroundColor", "red");
-			}
-
-		});
-	}
-
-	private void initializeSaveAndLoad() {
-		saveButton.setText("Save");
-		saveButton.addClickHandler(new ClickHandler(){
-			@Override
-			public void onClick(ClickEvent event) {
-				saveState();
-			}
-		});
-		
-		loadButton.setText("Load");
-		loadButton.addClickHandler(new ClickHandler(){
-			@Override
-			public void onClick(ClickEvent event) {
-				loadState();
-			}
-		});
-	}
-
 	private void initializeAudios() {
 		if (Audio.isSupported()) {
             dotSound = Audio.createIfSupported();
@@ -286,38 +204,11 @@ public class Graphics extends Composite implements View{
             gameOverSound.addSource(gameSounds.gameOverWav().getSafeUri()
                             .asString(), AudioElement.TYPE_WAV);
             
-            applauseSound = Audio.createIfSupported();
-            applauseSound.addSource(gameSounds.applauseMp3().getSafeUri()
-                            .asString(), AudioElement.TYPE_MP3);
-            applauseSound.addSource(gameSounds.applauseWav().getSafeUri()
-                            .asString(), AudioElement.TYPE_WAV);
-            
             oppositeCaptureSound = Audio.createIfSupported();
             oppositeCaptureSound.addSource(gameSounds.oppositeCaptureMp3().getSafeUri()
                             .asString(), AudioElement.TYPE_MP3);
             oppositeCaptureSound.addSource(gameSounds.oppositeCaptureWav().getSafeUri()
                             .asString(), AudioElement.TYPE_WAV);
-		}
-	}
-
-	/**
-	 * Loads a state from local storage
-	 */
-	protected void loadState() {
-		Storage storage = Storage.getLocalStorageIfSupported();
-		if (storage != null) {
-			String value = storage.getItem("currentState");
-			presenter.setState(presenter.deserializeState(value));
-		}
-	}
-	
-	/**
-	 * saves a state to locale storage
-	 */
-	protected void saveState() {
-		Storage storage = Storage.getLocalStorageIfSupported();
-		if (storage != null) {
-			storage.setItem("currentState", presenter.serializeState(presenter.state));
 		}
 	}
 	
@@ -328,7 +219,6 @@ public class Graphics extends Composite implements View{
 	 * @return an int[] array - [0] will contain x value, [1] will contain y value
 	 */
 	int[] getTargetPoint(int index) {
-
 		int[] point = new int[2];
 		
 		//the middle is supposed to be left out
@@ -551,7 +441,7 @@ public class Graphics extends Composite implements View{
 				handlerRegs[row][col] = pnl.addDomHandler(new ClickHandler() {
 	    	          @Override
 	    	          public void onClick(ClickEvent event) {
-	    	            warnLabel.setText("You can only choose one of your own pits where at least one seed is in!");
+	    	            warnLabel.setText("You can only choose one of your own pits with at least one seed when it's your turn!");
 	    	          }
 	    	        }, ClickEvent.getType());
 			}	
@@ -579,7 +469,9 @@ public class Graphics extends Composite implements View{
 	@Override
 	public void setMessage(String labelMsg, String HideBtnText, String restartBtnText) {
 		VerticalPanel vPanel = new VerticalPanel();
-		vPanel.add(new Label(labelMsg));
+		Label lbl = new Label(labelMsg);
+		lbl.setHorizontalAlignment(Label.ALIGN_CENTER);
+		vPanel.add(lbl);
 		if(HideBtnText != null){
 			Button okayButton = new Button(HideBtnText);
 			okayButton.addClickHandler(new ClickHandler() {
@@ -588,6 +480,8 @@ public class Graphics extends Composite implements View{
 	        	  gamePopupPanel.hide();
 	          }
 	        });
+			okayButton.getElement().getStyle().setProperty("marginLeft", "auto");
+			okayButton.getElement().getStyle().setProperty("marginRight", "auto");
 			vPanel.add(okayButton);
 		}
 		if(restartBtnText != null){
@@ -599,19 +493,22 @@ public class Graphics extends Composite implements View{
 	        	  gamePopupPanel.hide();
 	          }
 	        });
+			playAgainButton.getElement().getStyle().setProperty("marginLeft", "auto");
+			playAgainButton.getElement().getStyle().setProperty("marginRight", "auto");
 			vPanel.add(playAgainButton);
 		}
 		
 		gamePopupPanel.clear();
 		gamePopupPanel.setAutoHideEnabled(true);
 		gamePopupPanel.add(vPanel);	
-		gamePopupPanel.setPopupPositionAndShow(new PopupPanel.PositionCallback() {
-	          public void setPosition(int offsetWidth, int offsetHeight) {
-	              int left = (Window.getClientWidth() - offsetWidth) / 3;
-	              int top = (Window.getClientHeight() - offsetHeight) / 3;
-	              gamePopupPanel.setPopupPosition(left, top);
-	            }
-	          });	
+//		gamePopupPanel.setPopupPositionAndShow(new PopupPanel.PositionCallback() {
+//	          public void setPosition(int offsetWidth, int offsetHeight) {
+//	              int left = (Window.getClientWidth() - offsetWidth) / 3;
+//	              int top = (Window.getClientHeight() - offsetHeight) / 3;
+//	              gamePopupPanel.setPopupPosition(left, top);
+//	            }
+//	          });	
+		gamePopupPanel.center();
 	}
 
 	@Override
@@ -648,13 +545,21 @@ public class Graphics extends Composite implements View{
 	 * Every time the last seed is placed in a pit update the game board
 	 * This is a safety precaution that the UI state does not solely rely on the correct animation,
 	 * so the model is questioned again for the correct amount of seeds everywhere
+	 * 
+	 * After that contact the server and 
 	 */
-	public void afterFinalAnimation() {
+	public void afterAnimation() {
 		updateBoard();
+		presenter.contactServer();
 	}
 	
-	public void updateBoard() {
+	private void updateBoard() {
 		presenter.updateBoard();
+	}
+
+	@Override
+	public void showUserPairUp(String message) {
+		userLabel.setText(message);
 	}
 
 

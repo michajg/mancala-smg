@@ -4,15 +4,15 @@ import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.ImageResource;
 
 public interface GameImages extends ClientBundle {
-	@Source("dot.png")
+	@Source("img/dot.png")
 	  ImageResource redSeed();
 
-	@Source("graydot.png")
+	@Source("img/graydot.png")
 	  ImageResource graySeed();
 
-	@Source("diagonalhalfemptydot.png")
+	@Source("img/diagonalhalfemptydot.png")
 	  ImageResource seed();
 
-	@Source("Board.png")
+	@Source("img/Board1.png")
 	  ImageResource board();
 }

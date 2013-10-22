@@ -271,11 +271,13 @@ public class PresenterTest {
 		int[] southPits = new int[]{3,0,3,3,0,3,12};
 		PlayerColor whoseTurn = PlayerColor.N;
 		boolean gameOver = true;
-		presenter.state = new State(northPits, southPits, whoseTurn, gameOver);
+		boolean lastMoveWasOppositeCapture = true;
+		int oppositeSeeds = 5; 
+		presenter.state = new State(northPits, southPits, whoseTurn, gameOver, lastMoveWasOppositeCapture, oppositeSeeds);
 		
-		String serializedState = presenter.serializeState(presenter.state);
+		String serializedState = Presenter.serializeState(presenter.state);
 		
-		assertEquals("3,0,3,3,0,3,12_3,0,3,3,0,3,12_N_T", serializedState);
+		assertEquals("3,0,3,3,0,3,12_3,0,3,3,0,3,12_N_T_T_5", serializedState);
 	}
 	
 	/**
@@ -283,13 +285,15 @@ public class PresenterTest {
 	 */
 	@Test
 	public void testDeserialize(){
-		State testState = presenter.deserializeState("3,0,3,3,0,3,12_3,0,3,3,0,3,12_N_T");
+		State testState = Presenter.deserializeState("3,0,3,3,0,3,12_3,0,3,3,0,3,12_N_T_T_5");
 		
 		int[] northPits = new int[]{3,0,3,3,0,3,12};
 		int[] southPits = new int[]{3,0,3,3,0,3,12};
 		PlayerColor whoseTurn = PlayerColor.N;
 		boolean gameOver = true;
-		State expectedState = new State(northPits, southPits, whoseTurn, gameOver);
+		boolean lastMoveWasOppositeCapture = true;
+		int oppositeSeeds = 5; 
+		State expectedState = new State(northPits, southPits, whoseTurn, gameOver, lastMoveWasOppositeCapture, oppositeSeeds);
 		
 		assertEquals(expectedState, testState);
 	}

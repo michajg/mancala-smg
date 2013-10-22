@@ -149,7 +149,7 @@ public class SeedMovingAnimation extends Animation {
     protected void onCancel() {
     	super.onCancel();
         cancelled = true;
-        graphics.updateBoard();
+        graphics.afterAnimation();
     }
 
     @Override
@@ -167,7 +167,7 @@ public class SeedMovingAnimation extends Animation {
     		endPanel.add(seed, endXEndPanel, endYEndPanel);
     		
     		if(finalAnimation){
-    			graphics.afterFinalAnimation();
+    			graphics.afterAnimation();
     		}
     	}
     }
