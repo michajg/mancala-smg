@@ -5,6 +5,10 @@ import org.mancala.shared.State;
 import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.GameOverException;
 
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
 /**
  * The MVP-Presenter of the Mancala game
  * @author Micha Guthmann
@@ -20,6 +24,18 @@ public class Presenter {
 	 * The model of the MVP pattern the presenter will use
 	 */
 	State state;
+	
+	/**
+	 * userId is represented by his email address
+	 */
+	private String userId="";
+	
+	/**
+	 * keeps track of which side the player is. He is either South or North
+	 */
+	private PlayerColor iAm;
+	
+	
 	
 	/**
 	 * The view has to support these methods to communicate with the presenter 
@@ -69,6 +85,11 @@ public class Presenter {
          * Show the user who's turn it is somehow
          */
         void setWhoseTurn(PlayerColor side);
+        
+        /**
+         * Make the user pairing system a little bit more transparent to the user.
+         */
+        void showUserPairUp(String message);
 	}
 	
 	/**
@@ -84,17 +105,40 @@ public class Presenter {
 	}
 	
 	/**
+	 * Contact the server to register.
+	 * The server will return a string to make the pair up a little bit more transparent. 
+	 * The first player will see his name, the second player will see his name and who he plays against.
+	 * The server will also return which player the user is (North or South).
+	 */
+	void initialServerContact() {
+		AsyncCallback<String[]> callback = new AsyncCallback<String[]>() {
+			public void onSuccess(String[] result) {
+                 //Window.alert("initial server contact :" + result);
+                 graphics.showUserPairUp(result[0]);
+                 iAm = result[1].equals("N") ? PlayerColor.N : PlayerColor.S;
+                 enableActiveSide();
+            }
+			public void onFailure(Throwable caught) {
+                 Window.alert("initial server contact fail");
+            }
+		};
+		
+		MancalaServiceAsync ac = (MancalaServiceAsync) GWT.create(MancalaService.class);
+		ac.AddPlayer(userId, callback);
+	}
+
+	/**
 	 * makes a move on the model, adds the new state to the history and updates the board
 	 */
 	void makeMove(int index) {
 		try {
 			State oldState = state.copyState(); 
 			state.makeMove(index);
-			animateMove(index, oldState);
 			
-			//updatePits();
+			//contactServer() is called by the graphics class after the animation is done  
 			enableActiveSide();
 			disableZeroSeedPits();
+			animateMove(index, oldState);			
 			message();
 		} 
 		catch (IllegalMoveException e) {
@@ -107,6 +151,22 @@ public class Presenter {
 		}
 	}
 
+	/**
+	 * Contact the server to submit the move the user made
+	 */
+	void contactServer() {
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onSuccess(String result) {
+                 //Window.alert("testmicha :" + result);
+            }
+			public void onFailure(Throwable caught) {
+                 Window.alert("contacting the server failed.");
+            }
+		};
+		
+		MancalaServiceAsync ac = (MancalaServiceAsync) GWT.create(MancalaService.class);
+		ac.SubMove(Presenter.serializeState(state), userId, callback);
+	}
 
 	/**
 	 * Updates all elements that are necessary after the state changed
@@ -123,23 +183,37 @@ public class Presenter {
 	}
 
 	/**
-	 * It enables only the pits from the player whose turn it is
+	 * It enables only the pits from the player whose turn it is 
 	 */
 	void enableActiveSide() {
 		boolean enableNorth;
 		boolean enableSouth;
 		
-		if(state.getWhoseTurn().isNorth()){
+		if(state.getWhoseTurn().isNorth() && iAm.isNorth()){
 			graphics.setWhoseTurn(PlayerColor.N);
 			enableNorth = true;
 			enableSouth = false;
-			
 		}
-		else {
+		else if(state.getWhoseTurn().isNorth() && iAm.isSouth()){
+			graphics.setWhoseTurn(PlayerColor.N);
+			enableNorth = false;
+			enableSouth = false;
+		}
+		else if(state.getWhoseTurn().isSouth() && iAm.isSouth()){
 			graphics.setWhoseTurn(PlayerColor.S);
 			enableNorth = false;
 			enableSouth = true;
-		}		
+		}
+		else if(state.getWhoseTurn().isSouth() && iAm.isNorth()){
+			graphics.setWhoseTurn(PlayerColor.S);
+			enableNorth = false;
+			enableSouth = false;
+		}	
+		else { //iAm is not yet initialized 
+			graphics.setWhoseTurn(PlayerColor.S);
+			enableNorth = false;
+			enableSouth = false;
+		}
 		
 		for(int i = 0; i < state.getNorthPits().length-1; i++){
 			graphics.setPitEnabled(PlayerColor.N, i, enableNorth);
@@ -242,15 +316,21 @@ public class Presenter {
 		setState(new State());
 	}
 
+	void setId(String id) {
+		this.userId=id;
+	}
+	
     /**
      * gets a String serialized state and deserializes it into a State object
      */
-    State deserializeState(String serialized) {
+    static State deserializeState(String serialized) {
  	
     	int[] northPits = new int[7];
     	int[] southPits = new int[7];
     	PlayerColor whoseTurn = PlayerColor.S;
     	boolean gameOver = false;
+    	boolean lastMoveWasOppositeCapture = false;
+    	int oppositeSeeds = 0; 
     	
     	String[] serTokens = serialized.split("_");
     	
@@ -265,27 +345,31 @@ public class Presenter {
 		whoseTurn = serTokens[2].charAt(0) == 'N' ? PlayerColor.N : PlayerColor.S;
 		
     	gameOver = serTokens[3].charAt(0) == 'F' ? false : true;
+    	
+    	lastMoveWasOppositeCapture = serTokens[4].charAt(0) == 'F' ? false : true;
+    	
+    	oppositeSeeds = Integer.parseInt(serTokens[5]);
 
-		return new State(northPits, southPits, whoseTurn, gameOver);
+		return new State(northPits, southPits, whoseTurn, gameOver, lastMoveWasOppositeCapture, oppositeSeeds);
 		
 	}
 	
     /**
-     * gets a State state and serializes it into a String object
-     * The pattern will be: north pits _ south pits _ whose turn _ game over
-     * e.g. initial state would be 4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F
+     * Gets a State state and serializes it into a String object
+     * The pattern will be: north pits _ south pits _ whose turn _ game over _ lastMoveWasOppositeCapture _ oppositeSeeds
+     * e.g. initial state would be 4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0
      */
-    public String serializeState(State state) {
+    static public String serializeState(State state) {
     	String serialized = "";
     	for(int i = 0; i < state.getNorthPits().length; i++){
-    		if(i<state.getNorthPits().length-1)
+    		if(i < state.getNorthPits().length-1)
     			serialized += state.getNorthPits()[i]+",";
     		else
     			serialized += state.getNorthPits()[i]+"_";
     	}
 
     	for(int i = 0; i < state.getSouthPits().length; i++){
-    		if(i<state.getSouthPits().length-1)
+    		if(i < state.getSouthPits().length-1)
     			serialized += state.getSouthPits()[i]+",";
     		else
     			serialized += state.getSouthPits()[i]+"_";
@@ -293,7 +377,12 @@ public class Presenter {
 
     	serialized += state.getWhoseTurn().toString()+"_";
 
-    	serialized += state.isGameOver() ? "T":"F";
+    	serialized += state.isGameOver() ? "T_":"F_";
+
+    	serialized += state.getLastMoveWasOppositeCapture() ? "T_":"F_";
+    	
+    	serialized += state.getOppositeSeeds()+"";
+    	
     	return serialized; 
     }
 }

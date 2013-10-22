@@ -5,28 +5,28 @@ import com.google.gwt.resources.client.DataResource;
 
 public interface GameSounds extends ClientBundle {
     
-    @Source("click_x.mp3")
+    @Source("audio/click_x.mp3")
     DataResource dotMp3();
 
-    @Source("click_x.wav")
+    @Source("audio/click_x.wav")
     DataResource dotWav();
     
-    @Source("fanfare_x.mp3")
+    @Source("audio/fanfare_x.mp3")
     DataResource gameOverMp3();
 
-    @Source("fanfare_x.wav")
+    @Source("audio/fanfare_x.wav")
     DataResource gameOverWav();
     
-    @Source("applause_y.mp3")
+    @Source("audio/applause_y.mp3")
     DataResource applauseMp3();
 
-    @Source("applause_y.wav")
+    @Source("audio/applause_y.wav")
     DataResource applauseWav();
     
-    @Source("thunk.mp3")
+    @Source("audio/thunk.mp3")
     DataResource oppositeCaptureMp3();
 
-    @Source("thunk.wav")
+    @Source("audio/thunk.wav")
     DataResource oppositeCaptureWav();
         
 }

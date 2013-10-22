@@ -21,11 +21,11 @@ public class State {
 	private PlayerColor whoseTurn;
 	private boolean gameOver;
 	/**
-	 * 
+	 * A flag needed for the animation
 	 */
 	private boolean lastMoveWasOppositeCapture;
 	/**
-	 * 
+	 * Also needed for the animation - how many seeds were in the opposite pit in the case of opposite capture
 	 */
 	private int oppositeSeeds;
 	

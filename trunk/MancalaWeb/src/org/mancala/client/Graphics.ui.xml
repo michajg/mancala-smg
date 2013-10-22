@@ -2,21 +2,41 @@
 <ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
   xmlns:g="urn:import:com.google.gwt.user.client.ui">
   <ui:style field="css" type="org.mancala.client.GameCss">
+  	body {
+			background-image:url(pattern7.jpg); 
+			background-repeat:repeat;
+		}
+		.status{
+			padding: 35px;
+      font-family: 'Press Start 2P', cursive;
+      font-size:20px;
+      
+    }
+    .label{
+			padding: 35px;
+      font-family: 'Press Start 2P', cursive;
+      font-size:12px;
+    }
     .highlighted {
       outline: dotted green 2px;
     }
     td img {
-      display: block
+    	display: block
     }
+    .popup {
+			margin:0px;
+			background-color: lightgrey;
+			size:0px;
+		}
+		.gameBackgroundDiv {
+			background-color: white;
+		}
   </ui:style>
-  <g:HTMLPanel>
-    <g:PopupPanel ui:field="gamePopupPanel"/>
-  	<g:Label ui:field="turnLabel"/>
+  <g:HTMLPanel styleName="{css.gameBackgroundDiv}">
+    <g:PopupPanel ui:field="gamePopupPanel" styleName="{css.popup}"/>
+  	<g:Label ui:field="turnLabel" styleName="{css.status}"/>
     <g:AbsolutePanel ui:field="gameAbsolutePanel"/>
-    <g:Label ui:field="warnLabel"/>
-    <g:Button ui:field="saveButton"/>
-    <g:Button ui:field="loadButton"/>  
-    <g:Label ui:field="dragMeLabel"/>   
-    <g:Label ui:field="dragOnToMeLabel"/>  
+    <g:Label ui:field="userLabel" styleName="{css.label}"/> 
+    <g:Label ui:field="warnLabel" styleName="{css.label}"/> 
   </g:HTMLPanel>
 </ui:UiBinder> 
