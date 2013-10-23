@@ -10,12 +10,17 @@
 			padding: 35px;
       font-family: 'Press Start 2P', cursive;
       font-size:20px;
-      
     }
     .label{
-			padding: 35px;
+			padding: 25px;
       font-family: 'Press Start 2P', cursive;
       font-size:12px;
+    }
+    .leftLabels{
+			padding-left: 35px;
+			padding-top: 10px;
+      font-family: 'Press Start 2P', cursive;
+      font-size:10px;
     }
     .highlighted {
       outline: dotted green 2px;
@@ -31,12 +36,33 @@
 		.gameBackgroundDiv {
 			background-color: white;
 		}
+		.button {
+	 		margin: 10px;
+		}
   </ui:style>
   <g:HTMLPanel styleName="{css.gameBackgroundDiv}">
     <g:PopupPanel ui:field="gamePopupPanel" styleName="{css.popup}"/>
+    <g:Label ui:field="warnLabel" styleName="{css.label}"/> 
   	<g:Label ui:field="turnLabel" styleName="{css.status}"/>
     <g:AbsolutePanel ui:field="gameAbsolutePanel"/>
-    <g:Label ui:field="userLabel" styleName="{css.label}"/> 
-    <g:Label ui:field="warnLabel" styleName="{css.label}"/> 
+    <g:Label ui:field="statusLabel" styleName="{css.leftLabels}"/> 
+    <g:Label ui:field="userNameLabel" styleName="{css.leftLabels}"/> 
+    <g:Label ui:field="emailLabel" styleName="{css.leftLabels}"/> 
+    <g:Label ui:field="opponentNameLabel" styleName="{css.leftLabels}"/> 
+    <g:Label ui:field="matchIdLabel" styleName="{css.leftLabels}"/> 
+    <g:Button text="Random new game" ui:field="automatchButton" styleName="{css.button}"/>
+    <g:HorizontalPanel spacing="10">
+      <g:TextBox ui:field="emailBox" text="Opponent's email address"/>
+      <g:Button ui:field="playButton" text="Play!" />
+    </g:HorizontalPanel>
+    <g:HorizontalPanel spacing="10">
+      <g:ListBox ui:field="matchList">
+        <g:item>
+          --Select Match--
+        </g:item>
+      </g:ListBox>
+      <g:Button ui:field="deleteButton" text = "Delete Match" />
+    </g:HorizontalPanel>
+    
   </g:HTMLPanel>
 </ui:UiBinder> 
