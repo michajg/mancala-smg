@@ -17,4 +17,5 @@ public interface MancalaServiceAsync {
 	void changeMatch(Long matchId, AsyncCallback<String> callback);
 
 	void makeMove(Long matchId, Integer chosenIndex, String stateString, AsyncCallback<Void> callback);
+
 }

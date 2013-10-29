@@ -78,16 +78,6 @@ public class Presenter {
 		void oppositeCaptureSound();
 
 		/**
-		 * Show the user who's turn it is somehow
-		 */
-		void setWhoseTurn(PlayerColor side);
-
-		/**
-		 * Make the user pairing system a little bit more transparent to the user.
-		 */
-		void showUserPairUp(String message);
-
-		/**
 		 * Show the user name
 		 */
 		void setUserName(String userName);
@@ -125,7 +115,7 @@ public class Presenter {
 	public Presenter(View graphics) {
 		this.graphics = graphics;
 		state = new State();
-		updateBoard();
+		// updateBoard();
 	}
 
 	/**
@@ -162,7 +152,6 @@ public class Presenter {
 			graphics.setStatus("Start a Game!");
 		else {
 			graphics.setStatus(state.getWhoseTurn().equals(usersSide) ? "It's your Turn!" : "It's your Opponents Turn!");
-			graphics.setWhoseTurn(state.getWhoseTurn());
 		}
 		updatePits();
 		enableActiveSide();
@@ -282,8 +271,9 @@ public class Presenter {
 		}
 
 		if (this.state.getLastMoveWasOppositeCapture()) {
-			graphics.oppositeCaptureSound();
-			// I have to give this it's own animation down the line
+			// graphics.oppositeCaptureSound();
+
+			// TODO: give this it's own animation
 
 			// //int[] opposingPits = whoseTurn.isNorth() ?
 			// this.state.getSouthPits() : state.getNorthPits();
@@ -299,9 +289,13 @@ public class Presenter {
 	}
 
 	public void afterAnimation() {
+		if (state.getLastMoveWasOppositeCapture())
+			graphics.oppositeCaptureSound();
+
 		updateBoard();
 		// TODO: insert correct move to make animation happen everywhere later
 		graphics.sendMoveToServer(new Integer(0), serializeState(state));
+		// graphics.updateMatchList();
 	}
 
 	void setState(State state) {

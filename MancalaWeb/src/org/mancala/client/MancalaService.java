@@ -19,4 +19,5 @@ public interface MancalaService extends RemoteService {
 	public String changeMatch(Long matchId);
 
 	public void makeMove(Long matchId, Integer chosenIndex, String stateString);
+
 }

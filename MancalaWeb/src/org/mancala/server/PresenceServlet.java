@@ -42,20 +42,8 @@ public class PresenceServlet extends HttpServlet {
 			if (channelPresence.isConnected()) {
 				player.addToken(channelToken);
 				ofy().save().entity(player).now();
-			} else {
-				// Notify other players
-				/*
-				 * Set<Key<Match>> matches = player.getMatchesList(); for
-				 * (Key<Match> matchKey : matches) { Match match =
-				 * ofy().load().key(matchKey).get(); Key<Player> opponent =
-				 * match.getOpponent(playerKey); Player otherPlayer =
-				 * ofy().load().key(opponent).get(); String msg =
-				 * "otherdisconnected#"+otherPlayer.getPlayerName(); Set<String>
-				 * tokens = otherPlayer.getConnectedTokens();
-				 * ofy().save().entity(otherPlayer).now(); for (String
-				 * connection : tokens) { channelService.sendMessage(new
-				 * ChannelMessage(connection, msg)); } }
-				 */
+			}
+			else {
 				player.removeToken(channelToken);
 				ofy().save().entity(player).now();
 			}
