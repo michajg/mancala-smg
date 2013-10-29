@@ -4,56 +4,57 @@ import java.io.Serializable;
 
 public class LoginInfo implements Serializable {
 	private boolean loggedIn = false;
-    private String loginUrl;
-    private String logoutUrl;
-    private String emailAddress;
-    private String nickname;
-    private String token;
-    public boolean isLoggedIn() {
-      return loggedIn;
-    }
+	private String loginUrl;
+	private String logoutUrl;
+	private String emailAddress;
+	private String nickname;
+	private String token;
 
-    public void setLoggedIn(boolean loggedIn) {
-      this.loggedIn = loggedIn;
-    }
+	public boolean isLoggedIn() {
+		return loggedIn;
+	}
 
-    public String getLoginUrl() {
-      return loginUrl;
-    }
+	public void setLoggedIn(boolean loggedIn) {
+		this.loggedIn = loggedIn;
+	}
 
-    public void setLoginUrl(String loginUrl) {
-      this.loginUrl = loginUrl;
-    }
+	public String getLoginUrl() {
+		return loginUrl;
+	}
 
-    public String getLogoutUrl() {
-      return logoutUrl;
-    }
+	public void setLoginUrl(String loginUrl) {
+		this.loginUrl = loginUrl;
+	}
 
-    public void setLogoutUrl(String logoutUrl) {
-      this.logoutUrl = logoutUrl;
-    }
+	public String getLogoutUrl() {
+		return logoutUrl;
+	}
 
-    public String getEmailAddress() {
-      return emailAddress;
-    }
+	public void setLogoutUrl(String logoutUrl) {
+		this.logoutUrl = logoutUrl;
+	}
 
-    public void setEmailAddress(String emailAddress) {
-      this.emailAddress = emailAddress;
-    }
+	public String getEmailAddress() {
+		return emailAddress;
+	}
 
-    public String getNickname() {
-      return nickname;
-    }
-    
-    public void setToken(String t){
-            this.token=t;
-    }
-    
-    public String getToken(){
-            return token;
-    }
+	public void setEmailAddress(String emailAddress) {
+		this.emailAddress = emailAddress;
+	}
 
-    public void setNickname(String nickname) {
-      this.nickname = nickname;
-    }
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setToken(String t) {
+		this.token = t;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
 }

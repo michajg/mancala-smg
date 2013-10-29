@@ -11,14 +11,22 @@
       font-family: 'Press Start 2P', cursive;
       font-size:20px;
     }
-    .label{
+    .warnLabel{
 			padding: 25px;
       font-family: 'Press Start 2P', cursive;
       font-size:12px;
+			font-color:red;
     }
     .leftLabels{
 			padding-left: 35px;
 			padding-top: 10px;
+      font-family: 'Press Start 2P', cursive;
+      font-size:10px;
+    }
+		.sideLabel{
+			padding-left: 35px;
+			padding-top: 0px;
+			padding-bottom: 10px;
       font-family: 'Press Start 2P', cursive;
       font-size:10px;
     }
@@ -42,10 +50,10 @@
   </ui:style>
   <g:HTMLPanel styleName="{css.gameBackgroundDiv}">
     <g:PopupPanel ui:field="gamePopupPanel" styleName="{css.popup}"/>
-    <g:Label ui:field="warnLabel" styleName="{css.label}"/> 
+    <g:Label ui:field="warnLabel" styleName="{css.warnLabel}"/> 
   	<g:Label ui:field="turnLabel" styleName="{css.status}"/>
+  	<g:Label ui:field="sideLabel" styleName="{css.sideLabel}"/> 
     <g:AbsolutePanel ui:field="gameAbsolutePanel"/>
-    <g:Label ui:field="statusLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="userNameLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="emailLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="opponentNameLabel" styleName="{css.leftLabels}"/> 

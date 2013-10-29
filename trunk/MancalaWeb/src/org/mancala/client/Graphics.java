@@ -2,6 +2,7 @@ package org.mancala.client;
 
 import org.mancala.client.Presenter.View;
 import org.mancala.shared.IllegalMoveException;
+import org.mancala.shared.MatchInfo;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
 
@@ -68,6 +69,7 @@ public class Graphics extends Composite implements View {
 	 * An animation to distribute the seeds
 	 */
 	private SeedMovingAnimation animation;
+	private FadeAnimation fadeAnimation;
 
 	private static MancalaServiceAsync mancalaService = GWT.create(MancalaService.class);
 
@@ -81,6 +83,7 @@ public class Graphics extends Composite implements View {
 	private Long matchId;
 
 	private String userId;
+	private String opponentId;
 
 	/**
 	 * Note: UI is still proof of concept. I will add better images and better layout in the next homeworks The basis is an absolute
@@ -120,7 +123,7 @@ public class Graphics extends Composite implements View {
 	 * displays who the user is, which side he plays on and sometimes how the opponent is called
 	 */
 	@UiField
-	Label statusLabel;
+	Label sideLabel;
 
 	/**
 	 * displays user name of player
@@ -158,7 +161,7 @@ public class Graphics extends Composite implements View {
 	/**
 	 * Initializes the Graphics
 	 */
-	public Graphics() {
+	public Graphics(String userToken, String userEmail, String nickName) {
 		initWidget(uiBinder.createAndBindUi(this));
 
 		treasureGridN = new Grid(1, 1);
@@ -184,31 +187,29 @@ public class Graphics extends Composite implements View {
 				AbsolutePanel pitPanel = new AbsolutePanel();
 				pitPanel.setSize(PIT_WIDTH + "px", PIT_HEIGHT + "px");
 
-				addSeeds(pitPanel, 4);
+				addSeeds(pitPanel, 0);
 
 				if (row == 0) {
-					final int colB = col;
 					handlerRegs[row][col] = pitPanel.addDomHandler(new ClickHandler() {
 						@Override
 						public void onClick(ClickEvent event) {
-							presenter.makeMove(colB);
+							// presenter.makeMove(colB);
 						}
 					}, ClickEvent.getType());
 
 					gameGrid.setWidget(row, 5 - col, pitPanel);
-					setPitEnabled(PlayerColor.NORTH, col, false);
+					// setPitEnabled(PlayerColor.NORTH, col, false);
 				}
 				else {
-					final int colB = col;
 					handlerRegs[row][col] = pitPanel.addDomHandler(new ClickHandler() {
 						@Override
 						public void onClick(ClickEvent event) {
-							presenter.makeMove(colB);
+							// presenter.makeMove(colB);
 						}
 					}, ClickEvent.getType());
 
 					gameGrid.setWidget(row, col, pitPanel);
-					setPitEnabled(PlayerColor.SOUTH, col, true);
+					// setPitEnabled(PlayerColor.SOUTH, col, true);
 				}
 
 			}
@@ -233,98 +234,14 @@ public class Graphics extends Composite implements View {
 
 		turnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
 		warnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
-		statusLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
-
-		initializeAudios();
-	}
-
-	/**
-	 * Initializes the Graphics
-	 */
-	public Graphics(String stateStr, String userToken, String userEmail, String nickName) {
-		initWidget(uiBinder.createAndBindUi(this));
-
-		treasureGridN = new Grid(1, 1);
-		treasureGridN.setHeight(TREASURE_CHEST_HEIGHT + PADDING * 2 + "px");
-		treasureGridN.setCellPadding(PADDING);
-
-		treasureGridS = new Grid(1, 1);
-		treasureGridS.setHeight(TREASURE_CHEST_HEIGHT + PADDING * 2 + "px");
-		treasureGridS.setCellPadding(PADDING);
-
-		AbsolutePanel treasurePanelN = new AbsolutePanel();
-		treasurePanelN.setSize(TREASURE_CHEST_WIDTH + "px", TREASURE_CHEST_HEIGHT + "px");
-		treasureGridN.setWidget(0, 0, treasurePanelN);
-
-		AbsolutePanel treasurePanelS = new AbsolutePanel();
-		treasurePanelS.setSize(TREASURE_CHEST_WIDTH + "px", TREASURE_CHEST_HEIGHT + "px");
-		treasureGridS.setWidget(0, 0, treasurePanelS);
-
-		gameGrid = new Grid(2, 6);
-		gameGrid.resize(2, 6);
-		for (int row = 0; row < 2; row++) {
-			for (int col = 0; col < 6; col++) {
-				AbsolutePanel pitPanel = new AbsolutePanel();
-				pitPanel.setSize(PIT_WIDTH + "px", PIT_HEIGHT + "px");
-
-				addSeeds(pitPanel, 4);
-
-				if (row == 0) {
-					final int colB = col;
-					handlerRegs[row][col] = pitPanel.addDomHandler(new ClickHandler() {
-						@Override
-						public void onClick(ClickEvent event) {
-							presenter.makeMove(colB);
-						}
-					}, ClickEvent.getType());
-
-					gameGrid.setWidget(row, 5 - col, pitPanel);
-					setPitEnabled(PlayerColor.NORTH, col, false);
-				}
-				else {
-					final int colB = col;
-					handlerRegs[row][col] = pitPanel.addDomHandler(new ClickHandler() {
-						@Override
-						public void onClick(ClickEvent event) {
-							presenter.makeMove(colB);
-						}
-					}, ClickEvent.getType());
-
-					gameGrid.setWidget(row, col, pitPanel);
-					setPitEnabled(PlayerColor.SOUTH, col, true);
-				}
-
-			}
-		}
-
-		gameGrid.setCellPadding(20);
-
-		gameAbsolutePanel.add(treasureGridN);
-		gameAbsolutePanel.add(gameGrid, TREASURE_CHEST_WIDTH + 2 * PADDING, 0);
-		gameAbsolutePanel.add(treasureGridS, TREASURE_CHEST_WIDTH + 14 * PADDING + PIT_WIDTH * 6 + 6 * 2, 0);
-		gameAbsolutePanel.setSize(12 + TREASURE_CHEST_WIDTH * 2 + 16 * PADDING + PIT_WIDTH * 6 + "px", 4 + 4 * PADDING + 2
-				* PIT_HEIGHT + "px");
-		gameAbsolutePanel.getElement().getStyle().setProperty("margin", "auto");
-
-		DOM.setStyleAttribute(gameAbsolutePanel.getElement(), "backgroundColor", "#b0c4de");
-		Image bgImg = new Image();
-		bgImg.setResource(gameImages.board());
-
-		DOM.setStyleAttribute(gameAbsolutePanel.getElement(), "backgroundImage", "url(" + bgImg.getUrl() + ")");
-
-		presenter = new Presenter(this);
-
-		turnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
-		warnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
-		statusLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
 
 		initializeAudios();
 		initializeHandlers();
 		createChannel(userToken);
 
-		presenter.setState(Presenter.deserializeState(stateStr));
+		// presenter.setState(Presenter.deserializeState(stateStr));
 
-		userId = userEmail;
+		userId = userEmail.toLowerCase();
 
 		setUserName("Nickname: " + nickName);
 		setEmail("eMail: " + userEmail);
@@ -342,58 +259,68 @@ public class Graphics extends Composite implements View {
 
 			@Override
 			public void onMessage(String message) {
-				String[] msg = message.split("#");
-				String actionStr = msg[0];
-				String matchIdFromServer = msg[1];
-				if (actionStr.equals("newgame")) {
-					// msg : "newgame#" + match.getMatchId() + "#N#" + opponent.getPlayerName();
+				if (message.equals("") || message == null)
+					return;
+
+				MatchInfo mI = MatchInfo.deserialize(message);
+				updateMatchList();
+
+				if (mI.getAction().equals("newgame")) {
+					setWarnLabelText("A new Game was added to your List of Games!");
+
 					if (matchId == null) {
-						matchId = Long.valueOf(matchIdFromServer);
-						opponentNameLabel.setText("Opponent: " + msg[3]);
-						matchIdLabel.setText("MatchID: " + matchIdFromServer);
-						String usersSideStr = msg[2];
 
-						if (usersSideStr.equals("S"))
-							statusLabel.setText("It's your Turn!");
-						else
-							statusLabel.setText("It's your Opponents Turn!");
+						matchId = Long.valueOf(mI.getMatchId());
+						if (mI.getNorthPlayerId().equals(userId)) {
+							opponentNameLabel.setText("Opponent: " + mI.getSouthPlayerName());
+							opponentId = mI.getSouthPlayerId().toLowerCase();
+						}
+						else {
+							opponentNameLabel.setText("Opponent: " + mI.getNorthPlayerName());
+							opponentId = mI.getNorthPlayerId().toLowerCase();
+						}
 
-						presenter.setUsersSide(usersSideStr.equals("N") ? PlayerColor.N : PlayerColor.S);
+						matchIdLabel.setText("MatchID: " + mI.getMatchId());
+
+						if (mI.getUserIdOfWhoseTurnItIs().equals(userId)) {
+							turnLabel.setText("It's your Turn!");
+							presenter.setUsersSide(PlayerColor.S);
+							sideLabel.setText("You play on the South side");
+						}
+						else {
+							turnLabel.setText("It's your Opponents Turn!");
+							presenter.setUsersSide(PlayerColor.N);
+							sideLabel.setText("You play on the North side");
+						}
 
 						presenter.setState(new State());
 					}
-					else
-						updateMatchList();
-
 				}
-				else if (actionStr.equals("move")) {
-					if (matchId.equals(Long.valueOf(matchIdFromServer))) {
-						// msg : "move#" + matchId + "#" + userIdWhosTurn + "#" + stateString + "#" + chosenIndex.toString();
-						updateMatchList();
-						String userIdWhosTurn = msg[2];
-						String stateStr = msg[3];
-						String moveStr = msg[4];
-						matchIdLabel.setText("MatchID: " + matchIdFromServer);
+				else if (mI.getAction().equals("move")) {
 
-						if (userIdWhosTurn.equals(userId))
-							statusLabel.setText("It's your Turn!");
+					if (matchId.equals(Long.valueOf(mI.getMatchId()))) {
+						matchIdLabel.setText("MatchID: " + mI.getMatchId());
+
+						if (mI.getUserIdOfWhoseTurnItIs().equals(userId))
+							turnLabel.setText("It's your Turn!");
 						else
-							statusLabel.setText("It's your Oppnonents Turn!");
+							turnLabel.setText("It's your Oppnonents Turn!");
 
-						presenter.setState(Presenter.deserializeState(stateStr));
+						presenter.setState(Presenter.deserializeState(mI.getState()));
 
 						// TODO: Make animation work
-						// Move move = Presenter.deserializeMove(moveStr);
-						// animatePiece(move.getFrom().getRow(),
-						// move.getFrom().getCol(), move.getTo().getRow(),
-						// move.getTo().getCol(), 300);
 					}
-					else
-						updateMatchList();
+					else {
+						if (mI.getNorthPlayerId().equals(userId))
+							setWarnLabelText(mI.getSouthPlayerName() + " made a move in game " + mI.getMatchId()
+									+ ". Your Game List was updated!");
+						else
+							setWarnLabelText(mI.getNorthPlayerName() + " made a move in game " + mI.getMatchId()
+									+ ". Your Game List was updated!");
+					}
+
 				}
-				else if (actionStr.equals("otherdisconnected")) {
-					Window.alert("Opponent " + msg[1] + " is offline");
-				}
+
 			}
 
 			@Override
@@ -412,7 +339,7 @@ public class Graphics extends Composite implements View {
 		automatchButton.addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
-				statusLabel.setText("Waiting For Opponent");
+				turnLabel.setText("Waiting For Opponent");
 				opponentNameLabel.setText("");
 				matchId = null;
 				matchIdLabel.setText("");
@@ -449,7 +376,7 @@ public class Graphics extends Composite implements View {
 					@Override
 					public void onSuccess(Boolean result) {
 						if (result == false) {
-							Window.alert("User not found!");
+							Window.alert(emailBox.getText() + " has not registered yet!");
 						}
 					}
 
@@ -469,32 +396,41 @@ public class Graphics extends Composite implements View {
 
 					@Override
 					public void onSuccess(String result) {
-						if (!result.equals("no match")) {
-							String tokens[] = result.split("#");
-							// tokens[0] : matchId
-							// tokens[1] : userIdWhosTurn
-							// tokens[2] : otherPlayer.getPlayerName()
-							// tokens[3] : stateStr;
-							matchId = Long.valueOf(tokens[0]);
-							String userIdWhosTurn = tokens[1];
-							String opponentName = tokens[2];
-							String stateStrFromServer = tokens[3];
-							State newMatchState = Presenter.deserializeState(stateStrFromServer);
+						if (!result.trim().equals("noMatch")) {
+
+							MatchInfo mI = MatchInfo.deserialize(result);
+
+							matchId = Long.valueOf(mI.getMatchId());
+							State newMatchState = Presenter.deserializeState(mI.getState());
+							String opponentName;
+							String opponentEmail;
+							if (mI.getNorthPlayerId().equals(userId)) {
+								opponentName = mI.getSouthPlayerName();
+								opponentEmail = mI.getSouthPlayerId();
+							}
+							else {
+								opponentName = mI.getNorthPlayerName();
+								opponentEmail = mI.getNorthPlayerId();
+							}
 							opponentNameLabel.setText("Opponent: " + opponentName);
+							opponentId = opponentEmail.toLowerCase();
+
 							matchIdLabel.setText("MatchID: " + matchId);
 							PlayerColor usersSide;
-							if (userIdWhosTurn.equals(userId)) {
-								statusLabel.setText("It's your Turn!");
+							if (mI.getUserIdOfWhoseTurnItIs().equals(userId)) {
+								turnLabel.setText("It's your Turn!");
 								usersSide = newMatchState.getWhoseTurn();
 							}
 							else {
-								statusLabel.setText("It's the Turn of " + opponentName + "!");
+								turnLabel.setText("It's the Turn of " + opponentName + "!");
 								usersSide = newMatchState.getWhoseTurn().getOpposite();
 							}
 							presenter.setUsersSide(usersSide);
-							presenter.setState(Presenter.deserializeState(stateStrFromServer));
-							// if (!gameStatus.getText().startsWith("Game Over!"))
-							// gameStatus.setText(status);
+							if (usersSide.equals(PlayerColor.N))
+								sideLabel.setText("You play on the North side");
+							else
+								sideLabel.setText("You play on the South side");
+							presenter.setState(newMatchState);
 						}
 					}
 				});
@@ -521,8 +457,16 @@ public class Graphics extends Composite implements View {
 						mancalaService.loadMatches(loadMatchesCallback);
 					}
 				});
+
+				turnLabel.setText("Start new or select a Game");
+				sideLabel.setText("");
+				opponentNameLabel.setText("");
+				matchId = null;
+				matchIdLabel.setText("");
+				presenter.clearBoard();
 			}
 		});
+
 	}
 
 	AsyncCallback<String[]> loadMatchesCallback = new AsyncCallback<String[]>() {
@@ -535,46 +479,39 @@ public class Graphics extends Composite implements View {
 		public void onSuccess(String[] result) {
 			matchList.clear();
 			matchList.addItem("--Select Match--", "");
-			for (String matchString : result) {
-				if (matchString == null) {
+
+			for (String matchInfoString : result) {
+				if (matchInfoString == null) {
 					continue;
 				}
-				// matchTokens[0] : match.getMatchId()
-				// matchTokens[1] : otherPlayer.getEmail()
-				// matchTokens[2] : otherPlayer.getPlayerName()
-				// matchTokens[3] : userIdWhosTurn
-				// matchTokens[4] : userIdNorthPlayer
-				// matchTokens[5] : match.getState();
+				MatchInfo mI = MatchInfo.deserialize(matchInfoString);
 
-				String[] matchTokens = matchString.split("#");
-				String matchId = matchTokens[0];
-				// String opponentEmail = matchTokens[1];
-				String opponentName = matchTokens[2];
-				String userIdWhosTurn = matchTokens[3];
-				String userIdNorthPlayer = matchTokens[4];
-				PlayerColor usersSide = userIdNorthPlayer.equals("N") ? PlayerColor.N : PlayerColor.S;
+				PlayerColor usersSide = mI.getNorthPlayerId().equals(userId) ? PlayerColor.N : PlayerColor.S;
 				String turnText;
-				if (opponentName.equals(userIdWhosTurn))
-					turnText = "Their Turn";
+				if (mI.getUserIdOfWhoseTurnItIs().equals(userId))
+					turnText = "Your Turn";
 				else
-					turnText = "Your Turn!";
+					turnText = "Their Turn";
 
-				if (matchTokens.length > 5) {
-					String stateStr = matchTokens[5];
-					State state = Presenter.deserializeState(stateStr);
-					if (state.isGameOver()) {
-						if (state.winner() == null) {
-							turnText = "Game is over - it ended in a Tie";
-						}
-						else {
-							if (state.winner().equals(usersSide))
-								turnText = "Game is over - you won with " + state.score() + " against " + (48 - state.score()) + " points";
-							else
-								turnText = "Game is over - you lost with " + (48 - state.score()) + "against " + state.score() + " points";
-						}
+				State state = Presenter.deserializeState(mI.getState());
+				if (state.isGameOver()) {
+					if (state.winner() == null) {
+						turnText = "Game is over, it ended in a Tie";
+					}
+					else {
+						if (state.winner().equals(usersSide))
+							turnText = "Game is over, you won with " + state.score() + " against " + (48 - state.score()) + " points";
+						else
+							turnText = "Game is over, you lost with " + (48 - state.score()) + " against " + state.score() + " points";
 					}
 				}
-				matchList.addItem("MatchID: " + matchId + " (" + opponentName + ") - " + turnText, matchId);
+				String opponent;
+				if (mI.getNorthPlayerId().equals(userId))
+					opponent = mI.getSouthPlayerId();
+				else
+					opponent = mI.getNorthPlayerId();
+
+				matchList.addItem("Opponent: " + opponent + " - " + turnText + " - MatchID:" + mI.getMatchId(), mI.getMatchId());
 			}
 		}
 	};
@@ -831,7 +768,6 @@ public class Graphics extends Composite implements View {
 					@Override
 					public void onClick(ClickEvent event) {
 						presenter.makeMove(colB);
-						warnLabel.setText("");
 					}
 				}, ClickEvent.getType());
 			}
@@ -840,25 +776,19 @@ public class Graphics extends Composite implements View {
 				handlerRegs[row][col] = pnl.addDomHandler(new ClickHandler() {
 					@Override
 					public void onClick(ClickEvent event) {
-						warnLabel.setText("You can only choose one of your own pits with at least one seed when it's your turn!");
+						setWarnLabelText("You can only choose one of your own pits with at least one seed when it's your turn!");
 					}
 				}, ClickEvent.getType());
 			}
 
-			//
-			// AbsolutePanel pnl;
-			// if(side.isNorth()){
-			// pnl = (AbsolutePanel) gameGrid.getWidget(0,
-			// State.getMirrorIndex(index, 5));
-			// }
-			// else if(side.isSouth()){
-			// pnl = (AbsolutePanel) gameGrid.getWidget(1, index);
-			// }
-			// else
-			// throw new IllegalMoveException();
-
-			// setPitPanelEnabled(pnl, enabled, );
 		}
+	}
+
+	private void setWarnLabelText(String text) {
+		warnLabel.setText(text);
+		warnLabel.getElement().getStyle().setOpacity(1);
+		fadeAnimation = new FadeAnimation(warnLabel.getElement());
+		fadeAnimation.fade(6000, 0, 3000);
 	}
 
 	/**
@@ -888,7 +818,22 @@ public class Graphics extends Composite implements View {
 			playAgainButton.addClickHandler(new ClickHandler() {
 				@Override
 				public void onClick(ClickEvent event) {
-					presenter.newGame();
+					// rematch can be treated like a new emailgame
+					mancalaService.newEmailGame(opponentId, new AsyncCallback<Boolean>() {
+
+						@Override
+						public void onFailure(Throwable caught) {
+							Window.alert("An error occurred on the server!");
+						}
+
+						@Override
+						public void onSuccess(Boolean result) {
+							if (result == false) {
+								Window.alert(opponentId + " not found!");
+							}
+						}
+
+					});
 					gamePopupPanel.hide();
 				}
 			});
@@ -931,16 +876,6 @@ public class Graphics extends Composite implements View {
 			oppositeCaptureSound.play();
 	}
 
-	@Override
-	public void setWhoseTurn(PlayerColor side) {
-		if (side.isNorth())
-			turnLabel.setText("It is Norths turn");
-		else if (side.isSouth())
-			turnLabel.setText("It is Souths turn");
-		else
-			turnLabel.setText("The game is over");
-	}
-
 	/**
 	 * Every time the last seed is placed in a pit update the game board This is a safety precaution that the UI state does not
 	 * solely rely on the correct animation, so the model is questioned again for the correct amount of seeds everywhere
@@ -948,11 +883,6 @@ public class Graphics extends Composite implements View {
 	 */
 	public void afterAnimation() {
 		presenter.afterAnimation();
-	}
-
-	@Override
-	public void showUserPairUp(String message) {
-		statusLabel.setText(message);
 	}
 
 	@Override
@@ -988,6 +918,6 @@ public class Graphics extends Composite implements View {
 
 	@Override
 	public void setStatus(String status) {
-		statusLabel.setText(status);
+		turnLabel.setText(status);
 	}
 }

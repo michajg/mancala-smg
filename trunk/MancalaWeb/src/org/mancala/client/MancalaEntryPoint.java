@@ -1,7 +1,5 @@
 package org.mancala.client;
 
-import org.mancala.shared.State;
-
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.user.client.Window;
@@ -39,7 +37,8 @@ public class MancalaEntryPoint implements EntryPoint {
 						}
 
 					});
-				} else {
+				}
+				else {
 					LoginPanel lg = new LoginPanel(loginInfo.getLoginUrl());
 					lg.center();
 				}
@@ -49,8 +48,8 @@ public class MancalaEntryPoint implements EntryPoint {
 	}
 
 	private void loadGame(String token) {
-		String stateStr = Presenter.serializeState(new State());
-		final Graphics graphics = new Graphics(stateStr, token, loginInfo.getEmailAddress(), loginInfo.getNickname());
+
+		final Graphics graphics = new Graphics(token, loginInfo.getEmailAddress(), loginInfo.getNickname());
 
 		RootPanel.get().add(graphics);
 	}

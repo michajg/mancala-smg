@@ -10,8 +10,8 @@ public class LoginPanel extends PopupPanel {
 	private Label loginLabel = new Label("Please sign in to your Google Account to access Mancala.");
 	private Anchor signInLink = new Anchor("Sign In");
 	private Anchor signOutLink = new Anchor("Sign Out");
-	
-	public LoginPanel(String url){
+
+	public LoginPanel(String url) {
 		signInLink.setHref(url);
 		loginPanel.add(loginLabel);
 		loginPanel.add(signInLink);
