@@ -58,6 +58,8 @@
     <g:Label ui:field="emailLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="opponentNameLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="matchIdLabel" styleName="{css.leftLabels}"/> 
+    <g:Label ui:field="startDateLabel" styleName="{css.leftLabels}"/> 
+    
     <g:Button text="Random new game" ui:field="automatchButton" styleName="{css.button}"/>
     <g:HorizontalPanel spacing="10">
       <g:TextBox ui:field="emailBox" text="Opponent's email address"/>

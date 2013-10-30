@@ -21,7 +21,10 @@
 
   <!-- Other module inherits 																			-->
   <inherits name='com.googlecode.objectify.Objectify' />
-  
+  <inherits name="com.google.gwt.i18n.I18N"/>
+  <extend-property name="locale" values="en" />
+  <extend-property name="locale" values="de" />
+  <set-property-fallback name="locale" value="en"/>
   <!-- Specify the app entry point class.                         -->
   <entry-point class='org.mancala.client.MancalaEntryPoint'/>
 

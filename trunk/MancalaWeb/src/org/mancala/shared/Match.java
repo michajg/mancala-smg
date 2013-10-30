@@ -1,5 +1,7 @@
 package org.mancala.shared;
 
+import java.util.Date;
+
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -17,7 +19,7 @@ public class Match {
 	private Key<Player> northPlayer;
 	private Key<Player> southPlayer;
 	private String state;
-	
+	Long startDate;
 
 	public Match() {
 	}
@@ -26,6 +28,7 @@ public class Match {
 		this.northPlayer = north;
 		this.southPlayer = south;
 		this.state = state;
+		startDate = new Date().getTime();
 	}
 
 	public Long getMatchId() {
@@ -85,6 +88,14 @@ public class Match {
 		else if (southPlayer.equals(player)) {
 			southPlayer = null;
 		}
+	}
+
+	public Long getStartDate() {
+		return startDate;
+	}
+
+	public void setStartDate(Long startDate) {
+		this.startDate = startDate;
 	}
 
 }

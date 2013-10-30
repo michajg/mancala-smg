@@ -4,27 +4,79 @@ public class MatchInfo {
 	private String matchId;
 	private String northPlayerId;
 	private String northPlayerName;
+	private String northPlayerRating;
+	private String northPlayerRD;
 	private String southPlayerId;
 	private String southPlayerName;
+	private String southPlayerRating;
+	private String southPlayerRD;
 	private String state;
 	private String moveIndex;
 	private String userIdOfWhoseTurnItIs;
+	private String startDate;
 	private String action;
 
-	public MatchInfo() {
+	/**
+	 * @return the northPlayerRating
+	 */
+	public String getNorthPlayerRating() {
+		return northPlayerRating;
 	}
 
-	public MatchInfo(String matchId, String playerId, String playerName, String opponentId, String opponentName, String state,
-			String moveIndex, String userIdOfWhoseTurnItIs, String action) {
-		this.matchId = matchId;
-		this.northPlayerId = playerId;
-		this.northPlayerName = playerName;
-		this.southPlayerId = opponentId;
-		this.southPlayerName = opponentName;
-		this.state = state;
-		this.moveIndex = moveIndex;
-		this.userIdOfWhoseTurnItIs = userIdOfWhoseTurnItIs;
-		this.action = action;
+	/**
+	 * @param northPlayerRating
+	 *          the northPlayerRating to set
+	 */
+	public void setNorthPlayerRating(String northPlayerRating) {
+		this.northPlayerRating = northPlayerRating;
+	}
+
+	/**
+	 * @return the northPlayerRD
+	 */
+	public String getNorthPlayerRD() {
+		return northPlayerRD;
+	}
+
+	/**
+	 * @param northPlayerRD
+	 *          the northPlayerRD to set
+	 */
+	public void setNorthPlayerRD(String northPlayerRD) {
+		this.northPlayerRD = northPlayerRD;
+	}
+
+	/**
+	 * @return the southPlayerRating
+	 */
+	public String getSouthPlayerRating() {
+		return southPlayerRating;
+	}
+
+	/**
+	 * @param southPlayerRating
+	 *          the southPlayerRating to set
+	 */
+	public void setSouthPlayerRating(String southPlayerRating) {
+		this.southPlayerRating = southPlayerRating;
+	}
+
+	/**
+	 * @return the southPlayerRD
+	 */
+	public String getSouthPlayerRD() {
+		return southPlayerRD;
+	}
+
+	/**
+	 * @param southPlayerRD
+	 *          the southPlayerRD to set
+	 */
+	public void setSouthPlayerRD(String southPlayerRD) {
+		this.southPlayerRD = southPlayerRD;
+	}
+
+	public MatchInfo() {
 	}
 
 	/**
@@ -148,6 +200,21 @@ public class MatchInfo {
 	}
 
 	/**
+	 * @return the startDate
+	 */
+	public String getStartDate() {
+		return startDate;
+	}
+
+	/**
+	 * @param startDate
+	 *          the startDate to set
+	 */
+	public void setStartDate(String startDate) {
+		this.startDate = startDate;
+	}
+
+	/**
 	 * @return the action
 	 */
 	public String getAction() {
@@ -168,31 +235,41 @@ public class MatchInfo {
 		serialized += matchInfo.matchId + "#";
 		serialized += matchInfo.northPlayerId + "#";
 		serialized += matchInfo.northPlayerName + "#";
+		serialized += matchInfo.northPlayerRating + "#";
+		serialized += matchInfo.northPlayerRD + "#";
 		serialized += matchInfo.southPlayerId + "#";
 		serialized += matchInfo.southPlayerName + "#";
+		serialized += matchInfo.southPlayerRating + "#";
+		serialized += matchInfo.southPlayerRD + "#";
 		serialized += matchInfo.state + "#";
 		serialized += matchInfo.moveIndex + "#";
 		serialized += matchInfo.userIdOfWhoseTurnItIs + "#";
+		serialized += matchInfo.startDate + "#";
 		serialized += matchInfo.action;
 
 		return serialized;
 	}
 
 	public static MatchInfo deserialize(String serialized) {
-		String[] serTokens = serialized.split("#");
+		String[] serTokens = serialized.trim().split("#");
+		MatchInfo mI = new MatchInfo();
 
-		String matchId = serTokens[0];
-		String northPlayerId = serTokens[1];
-		String northPlayerName = serTokens[2];
-		String southPlayerId = serTokens[3];
-		String southPlayerName = serTokens[4];
-		String state = serTokens[5];
-		String moveIndex = serTokens[6];
-		String userIdOfWhoseTurnItIs = serTokens[7];
-		String action = serTokens[8].trim();
+		mI.matchId = serTokens[0];
+		mI.northPlayerId = serTokens[1];
+		mI.northPlayerName = serTokens[2];
+		mI.northPlayerRating = serTokens[3];
+		mI.northPlayerRD = serTokens[4];
+		mI.southPlayerId = serTokens[5];
+		mI.southPlayerName = serTokens[6];
+		mI.southPlayerRating = serTokens[7];
+		mI.southPlayerRD = serTokens[8];
+		mI.state = serTokens[9];
+		mI.moveIndex = serTokens[10];
+		mI.userIdOfWhoseTurnItIs = serTokens[11];
+		mI.startDate = serTokens[12];
+		mI.action = serTokens[13];
 
-		return new MatchInfo(matchId, northPlayerId, northPlayerName, southPlayerId, southPlayerName, state, moveIndex,
-				userIdOfWhoseTurnItIs, action);
+		return mI;
 	}
 
 }

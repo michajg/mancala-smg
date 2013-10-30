@@ -25,6 +25,8 @@ public class Player {
 	private Set<Key<Match>> matches;
 	@Index(IfTrue.class)
 	private boolean automatchPooled;
+	private double rating;
+	private double RD;
 
 	public Player() {
 		this.email = "";
@@ -32,6 +34,8 @@ public class Player {
 		connectedTokens = new HashSet<String>();
 		matches = new HashSet<Key<Match>>();
 		automatchPooled = false;
+		rating = 1500;
+		RD = 350;
 	}
 
 	public Player(String email, String name) {
@@ -78,5 +82,21 @@ public class Player {
 
 	public void setAutomatchEligible(boolean condition) {
 		automatchPooled = condition;
+	}
+
+	public double getRating() {
+		return rating;
+	}
+
+	public void setRating(double rating) {
+		this.rating = rating;
+	}
+
+	public double getRD() {
+		return RD;
+	}
+
+	public void setRD(double rD) {
+		RD = rD;
 	}
 }
