@@ -1,10 +1,10 @@
 package org.mancala.client;
 
-import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+import com.google.gwt.user.client.rpc.XsrfProtectedService;
 
 @RemoteServiceRelativePath("MancalaService")
-public interface MancalaService extends RemoteService {
+public interface MancalaService extends XsrfProtectedService {
 
 	public String connectPlayer();
 

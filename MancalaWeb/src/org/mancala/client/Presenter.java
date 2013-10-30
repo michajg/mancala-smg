@@ -5,6 +5,8 @@ import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
 
+import com.google.gwt.core.client.GWT;
+
 /**
  * The MVP-Presenter of the Mancala game
  * 
@@ -23,14 +25,11 @@ public class Presenter {
 	State state;
 
 	/**
-	 * userId is represented by his email address
-	 */
-	private String userId = "";
-
-	/**
 	 * keeps track of which side the player is. He is either South or North
 	 */
 	private PlayerColor usersSide;
+
+	private static MancalaMessages messages = GWT.create(MancalaMessages.class);
 
 	/**
 	 * The view has to support these methods to communicate with the presenter
@@ -133,10 +132,10 @@ public class Presenter {
 			message();
 
 		} catch (IllegalMoveException e) {
-			graphics.setMessage("New game because of error: " + e, "Okay", null);
+			graphics.setMessage(messages.newGameBecauseError() + e, "Okay", null);
 			setState(new State());
 		} catch (GameOverException e) {
-			graphics.setMessage("New game because of error: " + e, "Okay", null);
+			graphics.setMessage(messages.newGameBecauseError() + e, "Okay", null);
 			setState(new State());
 		}
 	}
@@ -149,9 +148,9 @@ public class Presenter {
 	void updateBoard() {
 
 		if (usersSide == null)
-			graphics.setStatus("Start a Game!");
+			graphics.setStatus(messages.startNewGame());
 		else {
-			graphics.setStatus(state.getWhoseTurn().equals(usersSide) ? "It's your Turn!" : "It's your Opponents Turn!");
+			graphics.setStatus(state.getWhoseTurn().equals(usersSide) ? messages.itsYourTurn() : messages.opponentsTurn());
 		}
 		updatePits();
 		enableActiveSide();
@@ -219,11 +218,11 @@ public class Presenter {
 			graphics.gameOverSound();
 
 			if (state.winner() == null) {
-				graphics.setMessage("It's a tie!", "okay", "play again");
+				graphics.setMessage(messages.tie(), "okay", messages.playAgain());
 			}
 			else {
 				String winner = state.winner().equals(PlayerColor.N) ? "North" : "South";
-				graphics.setMessage("The winner is " + winner + " with a score of " + state.score(), "Okay", "Play again");
+				graphics.setMessage(messages.winnerIs(winner, state.score() + ""), "Okay", messages.playAgain());
 			}
 		}
 	}
@@ -294,7 +293,7 @@ public class Presenter {
 
 		updateBoard();
 		// TODO: insert correct move to make animation happen everywhere later
-		graphics.sendMoveToServer(new Integer(0), serializeState(state));
+		graphics.sendMoveToServer(new Integer(0), State.serialize(state));
 		// graphics.updateMatchList();
 	}
 
@@ -306,75 +305,6 @@ public class Presenter {
 
 	public void newGame() {
 		setState(new State());
-	}
-
-	void setId(String id) {
-		this.userId = id;
-	}
-
-	/**
-	 * gets a String serialized state and deserializes it into a State object
-	 */
-	static State deserializeState(String serialized) {
-
-		int[] northPits = new int[7];
-		int[] southPits = new int[7];
-		PlayerColor whoseTurn = PlayerColor.S;
-		boolean gameOver = false;
-		boolean lastMoveWasOppositeCapture = false;
-		int oppositeSeeds = 0;
-
-		String[] serTokens = serialized.split("_");
-
-		String[] nTokens = serTokens[0].split(",");
-		for (int i = 0; i < nTokens.length; i++)
-			northPits[i] = Integer.parseInt(nTokens[i]);
-
-		String[] sTokens = serTokens[1].split(",");
-		for (int i = 0; i < sTokens.length; i++)
-			southPits[i] = Integer.parseInt(sTokens[i]);
-
-		whoseTurn = serTokens[2].charAt(0) == 'N' ? PlayerColor.N : PlayerColor.S;
-
-		gameOver = serTokens[3].charAt(0) == 'F' ? false : true;
-
-		lastMoveWasOppositeCapture = serTokens[4].charAt(0) == 'F' ? false : true;
-
-		oppositeSeeds = Integer.parseInt(serTokens[5]);
-
-		return new State(northPits, southPits, whoseTurn, gameOver, lastMoveWasOppositeCapture, oppositeSeeds);
-
-	}
-
-	/**
-	 * Gets a State state and serializes it into a String object The pattern will be: north pits _ south pits _ whose turn _ game
-	 * over _ lastMoveWasOppositeCapture _ oppositeSeeds e.g. initial state would be 4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0
-	 */
-	static public String serializeState(State state) {
-		String serialized = "";
-		for (int i = 0; i < state.getNorthPits().length; i++) {
-			if (i < state.getNorthPits().length - 1)
-				serialized += state.getNorthPits()[i] + ",";
-			else
-				serialized += state.getNorthPits()[i] + "_";
-		}
-
-		for (int i = 0; i < state.getSouthPits().length; i++) {
-			if (i < state.getSouthPits().length - 1)
-				serialized += state.getSouthPits()[i] + ",";
-			else
-				serialized += state.getSouthPits()[i] + "_";
-		}
-
-		serialized += state.getWhoseTurn().toString() + "_";
-
-		serialized += state.isGameOver() ? "T_" : "F_";
-
-		serialized += state.getLastMoveWasOppositeCapture() ? "T_" : "F_";
-
-		serialized += state.getOppositeSeeds() + "";
-
-		return serialized;
 	}
 
 	public void clearBoard() {

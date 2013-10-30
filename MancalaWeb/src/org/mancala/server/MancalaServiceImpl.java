@@ -2,15 +2,18 @@ package org.mancala.server;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.util.HashMap;
+import java.text.DecimalFormat;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.mancala.client.MancalaService;
+import org.mancala.shared.GlickoRating;
 import org.mancala.shared.Match;
 import org.mancala.shared.MatchInfo;
 import org.mancala.shared.Player;
+import org.mancala.shared.PlayerColor;
+import org.mancala.shared.State;
 
 import com.google.appengine.api.channel.ChannelMessage;
 import com.google.appengine.api.channel.ChannelService;
@@ -18,42 +21,45 @@ import com.google.appengine.api.channel.ChannelServiceFactory;
 import com.google.appengine.api.users.User;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
-import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.google.gwt.user.server.rpc.XsrfProtectedServiceServlet;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.ObjectifyService;
 
 /**
  * Contains remote server methods that provide services for multiplayer Mancala gameplay
  * 
- * @author Harsh - adapted by Micha Guthmann
+ * @author Micha Guthmann, special thanks to Harsh from whom I took a lot of inspiration from
  */
-public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaService {
+public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements MancalaService {
 	private static final long serialVersionUID = 1L;
-
-	private String wait = "";
-	private Map<String, String> hash = new HashMap<String, String>();
-	ChannelService channelService = ChannelServiceFactory.getChannelService();
 
 	static {
 		ObjectifyService.register(Player.class);
 		ObjectifyService.register(Match.class);
 	}
 
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
 	UserService userService = UserServiceFactory.getUserService();
+	private DecimalFormat decimal = new DecimalFormat("#.##");
 
 	@Override
 	public String connectPlayer() {
 		if (userService.isUserLoggedIn()) {
 			User user = userService.getCurrentUser();
+
 			String channelId = user.getEmail().toLowerCase();
+
 			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
 			Player player = ofy().load().key(playerKey).now();
+
 			if (player == null) { // New player
 				player = new Player(user.getEmail().toLowerCase(), user.getNickname());
 			}
+			double rating = player.getRating();
+			double RD = player.getRD();
 			ofy().save().entity(player).now();
-			// channelId += "-"+System.currentTimeMillis();
-			String token = channelService.createChannel(channelId);
+
+			String token = channelService.createChannel(channelId) + "#" + decimal.format(rating) + "#" + decimal.format(RD);
 			return token;
 		}
 		return null;
@@ -81,18 +87,24 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 
 				MatchInfo matchInfo = new MatchInfo();
 				matchInfo.setMatchId(match.getMatchId() + "");
+				Player northPlayer, southPlayer;
 				if (match.isNorthPlayer(playerKey)) {
-					matchInfo.setNorthPlayerId(player.getEmail());
-					matchInfo.setNorthPlayerName(player.getPlayerName());
-					matchInfo.setSouthPlayerId(opponent.getEmail());
-					matchInfo.setSouthPlayerName(opponent.getPlayerName());
+					northPlayer = player;
+					southPlayer = opponent;
 				}
 				else {
-					matchInfo.setNorthPlayerId(opponent.getEmail());
-					matchInfo.setNorthPlayerName(opponent.getPlayerName());
-					matchInfo.setSouthPlayerId(player.getEmail());
-					matchInfo.setSouthPlayerName(player.getPlayerName());
+					northPlayer = opponent;
+					southPlayer = player;
 				}
+				matchInfo.setNorthPlayerId(northPlayer.getEmail());
+				matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+				matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+				matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+				matchInfo.setSouthPlayerId(southPlayer.getEmail());
+				matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+				matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+				matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
+
 				matchInfo.setState(match.getState());
 				matchInfo.setMoveIndex(-1 + "");
 				if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
@@ -101,6 +113,7 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 				else {
 					matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
 				}
+				matchInfo.setStartDate(match.getStartDate() + "");
 				matchInfo.setAction("loadMatches");
 				String matchInfoString = MatchInfo.serialize(matchInfo);
 
@@ -156,11 +169,16 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 				matchInfo.setMatchId(match.getMatchId() + "");
 				matchInfo.setNorthPlayerId(opponent.getEmail());
 				matchInfo.setNorthPlayerName(opponent.getPlayerName());
+				matchInfo.setNorthPlayerRating(decimal.format(opponent.getRating()));
+				matchInfo.setNorthPlayerRD(decimal.format(opponent.getRD()));
 				matchInfo.setSouthPlayerId(player.getEmail());
 				matchInfo.setSouthPlayerName(player.getPlayerName());
-				matchInfo.setState("4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0");
+				matchInfo.setSouthPlayerRating(decimal.format(player.getRating()));
+				matchInfo.setSouthPlayerRD(decimal.format(player.getRD()));
+				matchInfo.setState(match.getState());
 				matchInfo.setMoveIndex(-1 + "");
 				matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
+				matchInfo.setStartDate(match.getStartDate() + "");
 				matchInfo.setAction("newgame");
 
 				String message = MatchInfo.serialize(matchInfo);
@@ -202,11 +220,16 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 			matchInfo.setMatchId(match.getMatchId() + "");
 			matchInfo.setNorthPlayerId(opponent.getEmail());
 			matchInfo.setNorthPlayerName(opponent.getPlayerName());
+			matchInfo.setNorthPlayerRating(decimal.format(opponent.getRating()));
+			matchInfo.setNorthPlayerRD(decimal.format(opponent.getRD()));
 			matchInfo.setSouthPlayerId(player.getEmail());
 			matchInfo.setSouthPlayerName(player.getPlayerName());
-			matchInfo.setState("4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0");
+			matchInfo.setSouthPlayerRating(decimal.format(player.getRating()));
+			matchInfo.setSouthPlayerRD(decimal.format(player.getRD()));
+			matchInfo.setState(match.getState());
 			matchInfo.setMoveIndex(-1 + "");
 			matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
+			matchInfo.setStartDate(match.getStartDate() + "");
 			matchInfo.setAction("newgame");
 			String message = MatchInfo.serialize(matchInfo);
 
@@ -271,18 +294,23 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 
 			MatchInfo matchInfo = new MatchInfo();
 			matchInfo.setMatchId(matchId + "");
+			Player northPlayer, southPlayer;
 			if (match.isNorthPlayer(playerKey)) {
-				matchInfo.setNorthPlayerId(player.getEmail());
-				matchInfo.setNorthPlayerName(player.getPlayerName());
-				matchInfo.setSouthPlayerId(opponent.getEmail());
-				matchInfo.setSouthPlayerName(opponent.getPlayerName());
+				northPlayer = player;
+				southPlayer = opponent;
 			}
 			else {
-				matchInfo.setNorthPlayerId(opponent.getEmail());
-				matchInfo.setNorthPlayerName(opponent.getPlayerName());
-				matchInfo.setSouthPlayerId(player.getEmail());
-				matchInfo.setSouthPlayerName(player.getPlayerName());
+				northPlayer = opponent;
+				southPlayer = player;
 			}
+			matchInfo.setNorthPlayerId(northPlayer.getEmail());
+			matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+			matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+			matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+			matchInfo.setSouthPlayerId(southPlayer.getEmail());
+			matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+			matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+			matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
 			matchInfo.setState(match.getState());
 			matchInfo.setMoveIndex(-1 + "");
 
@@ -292,6 +320,7 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 			else {
 				matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
 			}
+			matchInfo.setStartDate(match.getStartDate() + "");
 			matchInfo.setAction("changeMatch");
 
 			String message = MatchInfo.serialize(matchInfo);
@@ -319,20 +348,29 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 
 			ofy().save().entities(match, opponent, player).now();
 
+			State currentState = State.deserialize(match.getState());
+			if (currentState.isGameOver())
+				changeGeckoRatings(currentState, match, playerKey, opponentKey, player, opponent);
+
 			MatchInfo matchInfo = new MatchInfo();
 			matchInfo.setMatchId(matchId + "");
+			Player northPlayer, southPlayer;
 			if (match.isNorthPlayer(playerKey)) {
-				matchInfo.setNorthPlayerId(player.getEmail());
-				matchInfo.setNorthPlayerName(player.getPlayerName());
-				matchInfo.setSouthPlayerId(opponent.getEmail());
-				matchInfo.setSouthPlayerName(opponent.getPlayerName());
+				northPlayer = player;
+				southPlayer = opponent;
 			}
 			else {
-				matchInfo.setNorthPlayerId(opponent.getEmail());
-				matchInfo.setNorthPlayerName(opponent.getPlayerName());
-				matchInfo.setSouthPlayerId(player.getEmail());
-				matchInfo.setSouthPlayerName(player.getPlayerName());
+				northPlayer = opponent;
+				southPlayer = player;
 			}
+			matchInfo.setNorthPlayerId(northPlayer.getEmail());
+			matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+			matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+			matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+			matchInfo.setSouthPlayerId(southPlayer.getEmail());
+			matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+			matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+			matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
 			matchInfo.setState(state);
 			matchInfo.setMoveIndex(chosenIndex + "");
 			if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
@@ -341,6 +379,7 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 			else {
 				matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
 			}
+			matchInfo.setStartDate(match.getStartDate() + "");
 			matchInfo.setAction("move");
 			String message = MatchInfo.serialize(matchInfo);
 
@@ -355,6 +394,36 @@ public class MancalaServiceImpl extends RemoteServiceServlet implements MancalaS
 				channelService.sendMessage(new ChannelMessage(connection, message));
 			}
 		}
+	}
+
+	private void changeGeckoRatings(State state, Match match, Key<Player> playerKey, Key<Player> opponentKey, Player player,
+			Player opponent) {
+
+		double s = 0;
+		if (state.winner() != null) {
+			if (state.winner().equals(PlayerColor.N)) {
+				s = match.isNorthPlayer(playerKey) ? 1.0 : 0.0;
+			}
+			else if (state.winner().equals(PlayerColor.S)) {
+				s = match.isSouthPlayer(playerKey) ? 1.0 : 0.0;
+			}
+		}
+		else { // Draw
+			s = 0.5;
+		}
+
+		Date today = new Date();
+		int t = GlickoRating.getNumDays(new Date(match.getStartDate()), today);
+		double playerNewRD = GlickoRating.newRD(player.getRating(), player.getRD(), opponent.getRating(), opponent.getRD(), t);
+		double opponentNewRD = GlickoRating.newRD(opponent.getRating(), opponent.getRD(), player.getRating(), player.getRD(), t);
+		double playerNewRating = GlickoRating.newRating(player.getRating(), player.getRD(), opponent.getRating(), opponent.getRD(),
+				s, t);
+		double opponentNewRating = GlickoRating.newRating(opponent.getRating(), opponent.getRD(), player.getRating(), player.getRD(),
+				1 - s, t);
+		player.setRating(playerNewRating);
+		player.setRD(playerNewRD);
+		opponent.setRating(opponentNewRating);
+		opponent.setRD(opponentNewRD);
 	}
 
 }

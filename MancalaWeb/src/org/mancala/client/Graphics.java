@@ -1,5 +1,7 @@
 package org.mancala.client;
 
+import java.util.Date;
+
 import org.mancala.client.Presenter.View;
 import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.MatchInfo;
@@ -18,12 +20,18 @@ import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.media.client.Audio;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.HasRpcToken;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.rpc.XsrfToken;
+import com.google.gwt.user.client.rpc.XsrfTokenService;
+import com.google.gwt.user.client.rpc.XsrfTokenServiceAsync;
 import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
@@ -51,6 +59,7 @@ public class Graphics extends Composite implements View {
 	private static GameImages gameImages = GWT.create(GameImages.class);
 	private static GameSounds gameSounds = GWT.create(GameSounds.class);
 	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+	private static MancalaMessages messages = GWT.create(MancalaMessages.class);
 
 	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
 	}
@@ -120,7 +129,7 @@ public class Graphics extends Composite implements View {
 	Label warnLabel;
 
 	/**
-	 * displays who the user is, which side he plays on and sometimes how the opponent is called
+	 * displays which side the user plays on
 	 */
 	@UiField
 	Label sideLabel;
@@ -136,6 +145,12 @@ public class Graphics extends Composite implements View {
 	 */
 	@UiField
 	Label emailLabel;
+
+	/**
+	 * displays the start date of the Match
+	 */
+	@UiField
+	Label startDateLabel;
 
 	/**
 	 * To inform the user of certain events a PopupPabel will be used
@@ -161,7 +176,7 @@ public class Graphics extends Composite implements View {
 	/**
 	 * Initializes the Graphics
 	 */
-	public Graphics(String userToken, String userEmail, String nickName) {
+	public Graphics(String userToken, String userEmail, String nickName, String playerRating, String playerRD) {
 		initWidget(uiBinder.createAndBindUi(this));
 
 		treasureGridN = new Grid(1, 1);
@@ -243,7 +258,7 @@ public class Graphics extends Composite implements View {
 
 		userId = userEmail.toLowerCase();
 
-		setUserName("Nickname: " + nickName);
+		setUserName("Nickname: " + nickName + " (" + playerRating + "|" + playerRD + ")");
 		setEmail("eMail: " + userEmail);
 
 	}
@@ -253,7 +268,21 @@ public class Graphics extends Composite implements View {
 		channel.open(new SocketListener() {
 			@Override
 			public void onOpen() {
-				mancalaService.loadMatches(loadMatchesCallback);
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+						mancalaService.loadMatches(loadMatchesCallback);
+					}
+
+					public void onFailure(Throwable caught) {
+						Window.alert("Error retrieving xsrf token! Please try again later.");
+					}
+				});
+
 				presenter.clearBoard();
 			}
 
@@ -266,31 +295,34 @@ public class Graphics extends Composite implements View {
 				updateMatchList();
 
 				if (mI.getAction().equals("newgame")) {
-					setWarnLabelText("A new Game was added to your List of Games!");
+					setWarnLabelText(messages.newGameAdded());
 
 					if (matchId == null) {
 
 						matchId = Long.valueOf(mI.getMatchId());
 						if (mI.getNorthPlayerId().equals(userId)) {
-							opponentNameLabel.setText("Opponent: " + mI.getSouthPlayerName());
+							opponentNameLabel.setText(messages.opponent() + mI.getSouthPlayerName() + " (" + mI.getSouthPlayerRating() + "|"
+									+ mI.getSouthPlayerRD() + ")");
 							opponentId = mI.getSouthPlayerId().toLowerCase();
 						}
 						else {
-							opponentNameLabel.setText("Opponent: " + mI.getNorthPlayerName());
+							opponentNameLabel.setText(messages.opponent() + mI.getNorthPlayerName() + " (" + mI.getNorthPlayerRating() + "|"
+									+ mI.getNorthPlayerRD() + ")");
 							opponentId = mI.getNorthPlayerId().toLowerCase();
 						}
 
 						matchIdLabel.setText("MatchID: " + mI.getMatchId());
+						startDateLabel.setText("Start: " + getCustomLocalDate(Long.valueOf(mI.getStartDate())));
 
 						if (mI.getUserIdOfWhoseTurnItIs().equals(userId)) {
-							turnLabel.setText("It's your Turn!");
+							turnLabel.setText(messages.itsYourTurn());
 							presenter.setUsersSide(PlayerColor.S);
-							sideLabel.setText("You play on the South side");
+							sideLabel.setText(messages.playOnSouthSide());
 						}
 						else {
-							turnLabel.setText("It's your Opponents Turn!");
+							turnLabel.setText(messages.opponentsTurn());
 							presenter.setUsersSide(PlayerColor.N);
-							sideLabel.setText("You play on the North side");
+							sideLabel.setText(messages.playOnNorthSide());
 						}
 
 						presenter.setState(new State());
@@ -300,23 +332,39 @@ public class Graphics extends Composite implements View {
 
 					if (matchId.equals(Long.valueOf(mI.getMatchId()))) {
 						matchIdLabel.setText("MatchID: " + mI.getMatchId());
+						startDateLabel.setText("Start: " + getCustomLocalDate(Long.valueOf(mI.getStartDate())));
 
 						if (mI.getUserIdOfWhoseTurnItIs().equals(userId))
-							turnLabel.setText("It's your Turn!");
+							turnLabel.setText(messages.itsYourTurn());
 						else
-							turnLabel.setText("It's your Oppnonents Turn!");
+							turnLabel.setText(messages.opponentsTurn());
 
-						presenter.setState(Presenter.deserializeState(mI.getState()));
+						State currentState = State.deserialize(mI.getState());
+						presenter.setState(currentState);
+
+						if (currentState.isGameOver()) {
+							if (mI.getNorthPlayerId().equals(userId)) {
+								userNameLabel.setText("Nickname: " + mI.getNorthPlayerName() + " (" + mI.getNorthPlayerRating() + "|"
+										+ mI.getNorthPlayerRD() + ")");
+								opponentNameLabel.setText(messages.opponent() + mI.getSouthPlayerName() + " (" + mI.getSouthPlayerRating() + "|"
+										+ mI.getSouthPlayerRD() + ")");
+							}
+							else {
+								userNameLabel.setText("Nickname: " + mI.getSouthPlayerName() + " (" + mI.getSouthPlayerRating() + "|"
+										+ mI.getSouthPlayerRD() + ")");
+								opponentNameLabel.setText(messages.opponent() + mI.getNorthPlayerName() + " (" + mI.getNorthPlayerRating() + "|"
+										+ mI.getNorthPlayerRD() + ")");
+							}
+						}
 
 						// TODO: Make animation work
 					}
 					else {
 						if (mI.getNorthPlayerId().equals(userId))
-							setWarnLabelText(mI.getSouthPlayerName() + " made a move in game " + mI.getMatchId()
-									+ ". Your Game List was updated!");
+							setWarnLabelText(messages.opponentMadeMove(mI.getSouthPlayerName(), mI.getMatchId()));
 						else
-							setWarnLabelText(mI.getNorthPlayerName() + " made a move in game " + mI.getMatchId()
-									+ ". Your Game List was updated!");
+							setWarnLabelText(messages.opponentMadeMove(mI.getNorthPlayerName(), mI.getMatchId()));
+
 					}
 
 				}
@@ -339,101 +387,150 @@ public class Graphics extends Composite implements View {
 		automatchButton.addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
-				turnLabel.setText("Waiting For Opponent");
+				turnLabel.setText(messages.waitForOpponent());
 				opponentNameLabel.setText("");
 				matchId = null;
 				matchIdLabel.setText("");
+				startDateLabel.setText("");
 				presenter.clearBoard();
-				mancalaService.automatch(new AsyncCallback<Void>() {
-					@Override
-					public void onFailure(Throwable caught) {
-						// Do nothing
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+						mancalaService.automatch(new AsyncCallback<Void>() {
+							@Override
+							public void onFailure(Throwable caught) {
+								// Do nothing
+							}
+
+							@Override
+							public void onSuccess(Void result) {
+								// Do nothing
+							}
+						});
 					}
 
-					@Override
-					public void onSuccess(Void result) {
-						// Do nothing
+					public void onFailure(Throwable caught) {
+						Window.alert("Error retrieving xsrf token! Please try again later.");
 					}
 				});
+
 			}
 		});
 
 		playButton.addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
-				if (!emailBox.getText().matches(
-						"^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@" + "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$")) {
-					Window.alert("Invalid email address!");
+				String emailAdress = Graphics.sanitize(emailBox.getText());
+				if (!emailAdress.matches("^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@" + "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$")) {
+					Window.alert(messages.invalidEmail());
 					return;
 				}
-				mancalaService.newEmailGame(emailBox.getText(), new AsyncCallback<Boolean>() {
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+						mancalaService.newEmailGame(emailBox.getText(), new AsyncCallback<Boolean>() {
 
-					@Override
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.serverError());
+							}
+
+							@Override
+							public void onSuccess(Boolean result) {
+								if (result == false) {
+									Window.alert(messages.opponentNotRegistered(emailBox.getText()));
+								}
+
+							}
+
+						});
+					}
+
 					public void onFailure(Throwable caught) {
-						Window.alert("An error occurred on the server!");
+						Window.alert("Error retrieving xsrf token! Please try again later.");
 					}
-
-					@Override
-					public void onSuccess(Boolean result) {
-						if (result == false) {
-							Window.alert(emailBox.getText() + " has not registered yet!");
-						}
-					}
-
 				});
+
 			}
 		});
 
 		matchList.addChangeHandler(new ChangeHandler() {
 			@Override
 			public void onChange(ChangeEvent event) {
-				Long matchIDFromList = getSelectedMatch();
-				mancalaService.changeMatch(matchIDFromList, new AsyncCallback<String>() {
-					@Override
-					public void onFailure(Throwable caught) {
-						Window.alert("Error loading match!");
+				final Long matchIDFromList = getSelectedMatch();
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+						mancalaService.changeMatch(matchIDFromList, new AsyncCallback<String>() {
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.loadMatchError());
+							}
+
+							@Override
+							public void onSuccess(String result) {
+								if (!result.trim().equals("noMatch")) {
+
+									MatchInfo mI = MatchInfo.deserialize(result);
+
+									matchId = Long.valueOf(mI.getMatchId());
+									State newMatchState = State.deserialize(mI.getState());
+									String opponentName, opponentEmail, opponentRating, opponentRD;
+									if (mI.getNorthPlayerId().equals(userId)) {
+										opponentName = mI.getSouthPlayerName();
+										opponentEmail = mI.getSouthPlayerId();
+										opponentRating = mI.getSouthPlayerRating();
+										opponentRD = mI.getSouthPlayerRD();
+									}
+									else {
+										opponentName = mI.getNorthPlayerName();
+										opponentEmail = mI.getNorthPlayerId();
+										opponentRating = mI.getNorthPlayerRating();
+										opponentRD = mI.getNorthPlayerRD();
+									}
+									opponentNameLabel.setText(messages.opponent() + opponentName + " (" + opponentRating + "|" + opponentRD + ")");
+									opponentId = opponentEmail.toLowerCase();
+
+									matchIdLabel.setText("MatchID: " + matchId);
+
+									startDateLabel.setText("Start: " + getCustomLocalDate(Long.valueOf(mI.getStartDate())));
+									PlayerColor usersSide;
+									if (mI.getUserIdOfWhoseTurnItIs().equals(userId)) {
+										turnLabel.setText(messages.itsYourTurn());
+										usersSide = newMatchState.getWhoseTurn();
+									}
+									else {
+										turnLabel.setText(messages.turnOfOpponent(opponentName));
+										usersSide = newMatchState.getWhoseTurn().getOpposite();
+									}
+									presenter.setUsersSide(usersSide);
+									if (usersSide.equals(PlayerColor.N))
+										sideLabel.setText(messages.playOnNorthSide());
+									else
+										sideLabel.setText(messages.playOnSouthSide());
+									presenter.setState(newMatchState);
+								}
+							}
+						});
 					}
 
-					@Override
-					public void onSuccess(String result) {
-						if (!result.trim().equals("noMatch")) {
-
-							MatchInfo mI = MatchInfo.deserialize(result);
-
-							matchId = Long.valueOf(mI.getMatchId());
-							State newMatchState = Presenter.deserializeState(mI.getState());
-							String opponentName;
-							String opponentEmail;
-							if (mI.getNorthPlayerId().equals(userId)) {
-								opponentName = mI.getSouthPlayerName();
-								opponentEmail = mI.getSouthPlayerId();
-							}
-							else {
-								opponentName = mI.getNorthPlayerName();
-								opponentEmail = mI.getNorthPlayerId();
-							}
-							opponentNameLabel.setText("Opponent: " + opponentName);
-							opponentId = opponentEmail.toLowerCase();
-
-							matchIdLabel.setText("MatchID: " + matchId);
-							PlayerColor usersSide;
-							if (mI.getUserIdOfWhoseTurnItIs().equals(userId)) {
-								turnLabel.setText("It's your Turn!");
-								usersSide = newMatchState.getWhoseTurn();
-							}
-							else {
-								turnLabel.setText("It's the Turn of " + opponentName + "!");
-								usersSide = newMatchState.getWhoseTurn().getOpposite();
-							}
-							presenter.setUsersSide(usersSide);
-							if (usersSide.equals(PlayerColor.N))
-								sideLabel.setText("You play on the North side");
-							else
-								sideLabel.setText("You play on the South side");
-							presenter.setState(newMatchState);
-						}
+					public void onFailure(Throwable caught) {
+						Window.alert("Error retrieving xsrf token! Please try again later.");
 					}
 				});
+
 			}
 		});
 
@@ -446,39 +543,59 @@ public class Graphics extends Composite implements View {
 						break;
 					}
 				}
-				mancalaService.deleteMatch(matchId, new AsyncCallback<Void>() {
-					@Override
-					public void onFailure(Throwable caught) {
-						Window.alert("Error while deleting match!");
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+						mancalaService.deleteMatch(matchId, new AsyncCallback<Void>() {
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.deleteMatchError());
+							}
+
+							@Override
+							public void onSuccess(Void result) {
+								mancalaService.loadMatches(loadMatchesCallback);
+							}
+						});
 					}
 
-					@Override
-					public void onSuccess(Void result) {
-						mancalaService.loadMatches(loadMatchesCallback);
+					public void onFailure(Throwable caught) {
+						Window.alert("Error retrieving xsrf token! Please try again later.");
 					}
 				});
 
-				turnLabel.setText("Start new or select a Game");
+				turnLabel.setText(messages.startNewGame());
 				sideLabel.setText("");
 				opponentNameLabel.setText("");
 				matchId = null;
 				matchIdLabel.setText("");
+				startDateLabel.setText("");
 				presenter.clearBoard();
 			}
 		});
 
 	}
 
+	private String getCustomLocalDate(Long lDate) {
+		Date date = new Date(lDate);
+		return DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_SHORT).format(date) + " "
+				+ DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.TIME_SHORT).format(date);
+	}
+
 	AsyncCallback<String[]> loadMatchesCallback = new AsyncCallback<String[]>() {
 		@Override
 		public void onFailure(Throwable caught) {
-			Window.alert("Error while loading matches!");
+			Window.alert(messages.loadMatchError());
 		}
 
 		@Override
 		public void onSuccess(String[] result) {
 			matchList.clear();
-			matchList.addItem("--Select Match--", "");
+			matchList.addItem(messages.selectMatch(), "");
 
 			for (String matchInfoString : result) {
 				if (matchInfoString == null) {
@@ -489,20 +606,20 @@ public class Graphics extends Composite implements View {
 				PlayerColor usersSide = mI.getNorthPlayerId().equals(userId) ? PlayerColor.N : PlayerColor.S;
 				String turnText;
 				if (mI.getUserIdOfWhoseTurnItIs().equals(userId))
-					turnText = "Your Turn";
+					turnText = messages.yourTurn();
 				else
-					turnText = "Their Turn";
+					turnText = messages.theirTurn();
 
-				State state = Presenter.deserializeState(mI.getState());
+				State state = State.deserialize(mI.getState());
 				if (state.isGameOver()) {
 					if (state.winner() == null) {
-						turnText = "Game is over, it ended in a Tie";
+						turnText = messages.tie();
 					}
 					else {
 						if (state.winner().equals(usersSide))
-							turnText = "Game is over, you won with " + state.score() + " against " + (48 - state.score()) + " points";
+							turnText = messages.youWon(state.score() + "", (48 - state.score()) + "");
 						else
-							turnText = "Game is over, you lost with " + (48 - state.score()) + " against " + state.score() + " points";
+							turnText = messages.youLost((48 - state.score()) + "", state.score() + "");
 					}
 				}
 				String opponent;
@@ -511,7 +628,7 @@ public class Graphics extends Composite implements View {
 				else
 					opponent = mI.getNorthPlayerId();
 
-				matchList.addItem("Opponent: " + opponent + " - " + turnText + " - MatchID:" + mI.getMatchId(), mI.getMatchId());
+				matchList.addItem(messages.opponent() + opponent + " - " + turnText + " - MatchID: " + mI.getMatchId(), mI.getMatchId());
 			}
 		}
 	};
@@ -776,7 +893,7 @@ public class Graphics extends Composite implements View {
 				handlerRegs[row][col] = pnl.addDomHandler(new ClickHandler() {
 					@Override
 					public void onClick(ClickEvent event) {
-						setWarnLabelText("You can only choose one of your own pits with at least one seed when it's your turn!");
+						setWarnLabelText(messages.warnMessage());
 					}
 				}, ClickEvent.getType());
 			}
@@ -818,22 +935,36 @@ public class Graphics extends Composite implements View {
 			playAgainButton.addClickHandler(new ClickHandler() {
 				@Override
 				public void onClick(ClickEvent event) {
-					// rematch can be treated like a new emailgame
-					mancalaService.newEmailGame(opponentId, new AsyncCallback<Boolean>() {
+					// secured against xsrf attacks
+					// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+					XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+					((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+					xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+						public void onSuccess(XsrfToken token) {
+							((HasRpcToken) mancalaService).setRpcToken(token);
+							// rematch can be treated like a new emailgame
+							mancalaService.newEmailGame(opponentId, new AsyncCallback<Boolean>() {
 
-						@Override
+								@Override
+								public void onFailure(Throwable caught) {
+									Window.alert(messages.serverError());
+								}
+
+								@Override
+								public void onSuccess(Boolean result) {
+									if (result == false) {
+										Window.alert(messages.opponent404(opponentId));
+									}
+								}
+
+							});
+						}
+
 						public void onFailure(Throwable caught) {
-							Window.alert("An error occurred on the server!");
+							Window.alert("Error retrieving xsrf token! Please try again later.");
 						}
-
-						@Override
-						public void onSuccess(Boolean result) {
-							if (result == false) {
-								Window.alert(opponentId + " not found!");
-							}
-						}
-
 					});
+
 					gamePopupPanel.hide();
 				}
 			});
@@ -897,27 +1028,79 @@ public class Graphics extends Composite implements View {
 
 	@Override
 	public void sendMoveToServer(Integer chosenIndex, String stateString) {
-		mancalaService.makeMove(matchId, chosenIndex, stateString, new AsyncCallback<Void>() {
-			@Override
-			public void onFailure(Throwable caught) {
-				Window.alert("Server error!");
+		final Integer fChosenIndex = chosenIndex;
+		final String fStateString = stateString;
+
+		// secured against xsrf attacks
+		// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+		XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+		((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+		xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+			public void onSuccess(XsrfToken token) {
+				((HasRpcToken) mancalaService).setRpcToken(token);
+				mancalaService.makeMove(matchId, fChosenIndex, fStateString, new AsyncCallback<Void>() {
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert("Server error!");
+					}
+
+					@Override
+					public void onSuccess(Void result) {
+						updateMatchList();
+					}
+				});
 			}
 
-			@Override
-			public void onSuccess(Void result) {
-				matchIdLabel.setText("MatchID: " + matchId);
-				updateMatchList();
+			public void onFailure(Throwable caught) {
+				Window.alert("Error retrieving xsrf token! Please try again later.");
 			}
 		});
+
 	}
 
 	@Override
 	public void updateMatchList() {
-		mancalaService.loadMatches(loadMatchesCallback);
+		// secured against xsrf attacks
+		// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+		XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+		((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+		xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+			public void onSuccess(XsrfToken token) {
+				((HasRpcToken) mancalaService).setRpcToken(token);
+				mancalaService.loadMatches(loadMatchesCallback);
+			}
+
+			public void onFailure(Throwable caught) {
+				Window.alert("Error retrieving xsrf token! Please try again later.");
+			}
+		});
+
 	}
 
 	@Override
 	public void setStatus(String status) {
 		turnLabel.setText(status);
 	}
+
+	/**
+	 * make the user input a little bit more secure found this here:
+	 * http://www.coderanch.com/t/361152/Servlets/java/Sanitization-routines-HTML-input
+	 */
+	static String sanitize(String dirtyString) {
+		if (null == dirtyString)
+			return null;
+
+		String tmp = dirtyString;
+		// clean up line format chars
+		tmp = tmp.replaceAll("\n", " ").replace("\r", " ").replace("\t", " ");
+		// remove SGML markup
+		tmp = tmp.replaceAll("<[^>]*>", " ");
+		// remove any remaining metacharacters &;`'\|"*?~<>^()[]{}$ and null (00h)
+		tmp = tmp.replaceAll("[\\&;`'\\\\\\|\"*?~<>^\\(\\)\\[\\]\\{\\}\\$\\x00]", "");
+
+		// clean up whitespace
+		tmp = tmp.replaceAll("\\s+", " ").trim();
+		return tmp;
+	}
+
 }
