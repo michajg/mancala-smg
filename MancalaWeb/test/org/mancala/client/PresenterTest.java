@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mancala.client.Presenter.View;
+import org.mancala.client.View;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
 import org.mockito.Mockito;
@@ -17,7 +17,7 @@ public class PresenterTest {
 
 	@Before
 	public void setup() {
-		graphics = Mockito.mock(Presenter.View.class);
+		graphics = Mockito.mock(View.class);
 		presenter = new Presenter(graphics);
 		// HasClickHandlers dummyResetButton = Mockito.mock(HasClickHandlers.class);
 	}

@@ -20,6 +20,7 @@ public class Match {
 	private Key<Player> southPlayer;
 	private String state;
 	Long startDate;
+	boolean singleGame;
 
 	public Match() {
 	}
@@ -29,6 +30,21 @@ public class Match {
 		this.southPlayer = south;
 		this.state = state;
 		startDate = new Date().getTime();
+	}
+
+	/**
+	 * @return the isSingleGame
+	 */
+	public boolean getSingleGame() {
+		return singleGame;
+	}
+
+	/**
+	 * @param isSingleGame
+	 *          the isSingleGame to set
+	 */
+	public void setSingleGame(boolean singleGame) {
+		this.singleGame = singleGame;
 	}
 
 	public Long getMatchId() {

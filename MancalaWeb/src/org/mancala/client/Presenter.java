@@ -1,11 +1,15 @@
 package org.mancala.client;
 
+import org.mancala.shared.AlphaBetaPruning;
+import org.mancala.shared.DateTimer;
 import org.mancala.shared.GameOverException;
+import org.mancala.shared.Heuristic;
 import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 
 /**
  * The MVP-Presenter of the Mancala game
@@ -13,6 +17,8 @@ import com.google.gwt.core.client.GWT;
  * @author Micha Guthmann
  */
 public class Presenter {
+
+	private static MancalaMessages messages = GWT.create(MancalaMessages.class);
 
 	/**
 	 * The view of the MVP pattern the presenter will use
@@ -28,84 +34,8 @@ public class Presenter {
 	 * keeps track of which side the player is. He is either South or North
 	 */
 	private PlayerColor usersSide;
-
-	private static MancalaMessages messages = GWT.create(MancalaMessages.class);
-
-	/**
-	 * The view has to support these methods to communicate with the presenter
-	 * 
-	 * @author Micha Guthmann
-	 */
-	public interface View {
-
-		/**
-		 * The seedAmount will be placed on the right side at the correct index
-		 */
-		void setSeeds(PlayerColor side, int col, int seedAmount);
-
-		/**
-		 * A player can only select certain pits for their move. That's why some have to be enabled and some have to be disabled
-		 * before a player's turn.
-		 */
-		void setPitEnabled(PlayerColor side, int col, boolean enabled);
-
-		/**
-		 * /** Informs the user of certain events. If the parameter for the buttons is null no button will be displayed. The first
-		 * button makes the information disappear, the second starts a new game
-		 */
-		void setMessage(String labelMsg, String HideBtnText, String restartBtnText);
-
-		/**
-		 * Animate seeds moving from one pit to an other
-		 */
-		void animateFromPitToPit(PlayerColor startSide, int startCol, PlayerColor endSide, int endCol, double delay,
-				boolean finalAnimation);
-
-		/**
-		 * Cancel an animation (for if a game is loaded in the middle of an animation)
-		 */
-		void cancelAnimation();
-
-		/**
-		 * Plays a sound for the event of a game finishing
-		 */
-		void gameOverSound();
-
-		/**
-		 * Plays a sound for the event of catching seeds from the opposite pit
-		 */
-		void oppositeCaptureSound();
-
-		/**
-		 * Show the user name
-		 */
-		void setUserName(String userName);
-
-		/**
-		 * Show email address
-		 */
-		void setEmail(String email);
-
-		/**
-		 * Show status
-		 */
-		void setStatus(String status);
-
-		/**
-		 * Send the move just made to the server
-		 * 
-		 * @param serializedMove
-		 *          The String representation of the move
-		 * @param stateString
-		 *          The String representation of the state
-		 */
-		void sendMoveToServer(Integer chosenIndex, String stateString);
-
-		/**
-		 * Updates the matches listbox
-		 */
-		void updateMatchList();
-	}
+	State stateToSetAfterAnimation;
+	int lastMove;
 
 	/**
 	 * 1. Sets the view 2. Checks if there is already a state in the url fragment and if so initializes this 3. Initializes the
@@ -118,18 +48,45 @@ public class Presenter {
 	}
 
 	/**
+	 * @return the state
+	 */
+	public State getState() {
+		return state;
+	}
+
+	/**
+	 * @param stateToSetAfterAnimation
+	 *          the stateToSetAfterAnimation to set
+	 */
+	public void setStateToSetAfterAnimation(State stateToSetAfterAnimation) {
+		this.stateToSetAfterAnimation = stateToSetAfterAnimation;
+	}
+
+	/**
 	 * makes a move on the model, adds the new state to the history and updates the board
 	 */
 	void makeMove(int index) {
 		try {
-			State oldState = state.copyState();
-			state.makeMove(index);
+			lastMove = index;
+			if (graphics.getAiMatch()) {
+				stateToSetAfterAnimation = state.copyState();
+				stateToSetAfterAnimation.makeMove(index);
+				makeAnimatedMove(index, state.copyState());
+			}
+			else {
+				State stateCopy = state.copyState();
+				stateCopy.makeMove(index);
+				graphics.sendMoveToServer(index, State.serialize(stateCopy));
+			}
+			// State oldState = state.copyState();
+			//
+			// stateToSetAfterAnimation = state.copyState();
+			// stateToSetAfterAnimation.makeMove(index);
 
-			// graphics.sendMoveToServer() is called by the graphics class after the animation is done
-			enableActiveSide();
-			disableZeroSeedPits();
-			animateMove(index, oldState);
-			message();
+			// state.makeMove(index);
+
+			// sendMoveToServer() is called by the graphics class after the animation is done
+			// makeAnimatedMove(index, oldState);
 
 		} catch (IllegalMoveException e) {
 			graphics.setMessage(messages.newGameBecauseError() + e, "Okay", null);
@@ -197,7 +154,7 @@ public class Presenter {
 	 */
 	void disableZeroSeedPits() {
 		int[] activePits = new int[7];
-		if (state.getWhoseTurn().equals(PlayerColor.N))
+		if (state.getWhoseTurn().isNorth())
 			activePits = state.getNorthPits();
 		else
 			activePits = state.getSouthPits();
@@ -221,7 +178,7 @@ public class Presenter {
 				graphics.setMessage(messages.tie(), "okay", messages.playAgain());
 			}
 			else {
-				String winner = state.winner().equals(PlayerColor.N) ? "North" : "South";
+				String winner = state.winner().isNorth() ? "North" : "South";
 				graphics.setMessage(messages.winnerIs(winner, state.score() + ""), "Okay", messages.playAgain());
 			}
 		}
@@ -245,9 +202,11 @@ public class Presenter {
 	 * @param oldState
 	 *          the state before the user chose his pit
 	 */
-	private void animateMove(int chosenPitIndex, State oldState) {
+	void makeAnimatedMove(int chosenPitIndex, State oldState) {
+
 		// disable board until the animation is over
 		disableBoard();
+		state.makeMove(chosenPitIndex);
 
 		PlayerColor whoseTurn = oldState.getWhoseTurn();
 		PlayerColor sideToPlaceSeedOn = whoseTurn;
@@ -288,12 +247,14 @@ public class Presenter {
 	}
 
 	public void afterAnimation() {
-		if (state.getLastMoveWasOppositeCapture())
+		if (stateToSetAfterAnimation.getLastMoveWasOppositeCapture())
 			graphics.oppositeCaptureSound();
 
+		state = stateToSetAfterAnimation.copyState();
 		updateBoard();
-		// TODO: insert correct move to make animation happen everywhere later
-		graphics.sendMoveToServer(new Integer(0), State.serialize(state));
+
+		if (graphics.getAiMatch())
+			graphics.sendMoveToServerAI(lastMove, state);
 		// graphics.updateMatchList();
 	}
 
@@ -328,4 +289,39 @@ public class Presenter {
 	public void setUsersSide(PlayerColor side) {
 		usersSide = side;
 	}
+
+	public PlayerColor getUsersSide() {
+		return usersSide;
+	}
+
+	public void makeAiMove() {
+		// System.out.println("Presenter makeAiMove");
+		if (state.isGameOver()) {
+			return;
+		}
+		AlphaBetaPruning ai = new AlphaBetaPruning(new Heuristic());
+		Integer aiMove = ai.findBestMove(state, 5, new DateTimer(3000));
+
+		System.out.println("P MAIM state: " + state);
+		System.out.println("P MAIM move: " + aiMove);
+
+		State oldState = state.copyState();
+
+		stateToSetAfterAnimation = state.copyState();
+		stateToSetAfterAnimation.makeMove(aiMove);
+
+		makeAnimatedMove(aiMove, oldState);
+
+		// state.makeMove(aiMove);
+		System.out.println("State after Move: " + state);
+		// setState(state);
+
+		// graphics.sendMoveToServerAI(aiMove, state);
+
+		// this will be made in the graphics after the move was saved
+		// if (state.getWhoseTurn().equals(usersSide.getOpposite()))
+		// makeAiMove();
+
+	}
+
 }

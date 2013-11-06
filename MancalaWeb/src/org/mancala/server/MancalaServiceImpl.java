@@ -41,6 +41,7 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 	ChannelService channelService = ChannelServiceFactory.getChannelService();
 	UserService userService = UserServiceFactory.getUserService();
 	private DecimalFormat decimal = new DecimalFormat("#.##");
+	private final String INITIAL_STATE_STRING = "4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0";
 
 	@Override
 	public String connectPlayer() {
@@ -157,7 +158,7 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 				opponent.setAutomatchEligible(false); // Remove this player from the automatch pool
 
 				final Key<Player> opponentKey = Key.create(Player.class, opponent.getEmail());
-				Match match = new Match(opponentKey, playerKey, "4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0");
+				Match match = new Match(opponentKey, playerKey, INITIAL_STATE_STRING);
 				Key<Match> matchKey = ofy().save().entity(match).now();
 				player.addMatch(matchKey);
 				opponent.addMatch(matchKey);
@@ -210,7 +211,7 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 				// No such player exists in the data store
 				return new Boolean(false);
 			}
-			Match match = new Match(opponentKey, playerKey, "4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0");
+			Match match = new Match(opponentKey, playerKey, INITIAL_STATE_STRING);
 			Key<Match> matchKey = ofy().save().entity(match).now();
 			player.addMatch(matchKey);
 			opponent.addMatch(matchKey);
@@ -385,12 +386,10 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 
 			Set<String> tokens1 = player.getConnectedTokens();
 			for (String connection : tokens1) {
-				System.out.println("token :" + connection);
 				channelService.sendMessage(new ChannelMessage(connection, message));
 			}
 			Set<String> tokens2 = opponent.getConnectedTokens();
 			for (String connection : tokens2) {
-				System.out.println("token :" + connection);
 				channelService.sendMessage(new ChannelMessage(connection, message));
 			}
 		}
@@ -401,10 +400,10 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 
 		double s = 0;
 		if (state.winner() != null) {
-			if (state.winner().equals(PlayerColor.N)) {
+			if (state.winner().isNorth()) {
 				s = match.isNorthPlayer(playerKey) ? 1.0 : 0.0;
 			}
-			else if (state.winner().equals(PlayerColor.S)) {
+			else if (state.winner().isSouth()) {
 				s = match.isSouthPlayer(playerKey) ? 1.0 : 0.0;
 			}
 		}
@@ -424,6 +423,50 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 		player.setRD(playerNewRD);
 		opponent.setRating(opponentNewRating);
 		opponent.setRD(opponentNewRD);
+	}
+
+	@Override
+	public String registerAiMatch(boolean aiIsNorth) {
+		if (userService.isUserLoggedIn()) {
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).now();
+
+			Key<Player> aiKey = Key.create(Player.class, "AI");
+			Player aiPlayer = ofy().load().key(aiKey).now();
+			if (aiPlayer == null) { // register aiplayer in the server
+				aiPlayer = new Player("AI", "AI");
+			}
+			ofy().save().entity(aiPlayer).now();
+
+			Match match;
+			if (aiIsNorth) {
+				match = new Match(aiKey, playerKey, INITIAL_STATE_STRING);
+			}
+			else {
+				match = new Match(playerKey, aiKey, INITIAL_STATE_STRING);
+			}
+			match.setSingleGame(true);
+			Key<Match> matchKey = ofy().save().entity(match).now();
+
+			Long matchDate = match.getStartDate();
+			player.addMatch(matchKey);
+			String message1 = "newAIgame#" + match.getMatchId() + "#S#" + matchDate;
+			ofy().save().entities(player, match).now();
+			return message1;
+		}
+		return null;
+	}
+
+	@Override
+	public void saveAiMove(Long matchId, String moveString, String stateString) {
+		if (userService.isUserLoggedIn()) {
+			Key<Match> matchKey = Key.create(Match.class, matchId);
+			Match match = ofy().load().key(matchKey).now();
+
+			match.setState(stateString);
+			ofy().save().entity(match).now();
+		}
 	}
 
 }

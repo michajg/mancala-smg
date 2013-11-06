@@ -48,8 +48,9 @@
 	 		margin: 10px;
 		}
   </ui:style>
-  <g:HTMLPanel styleName="{css.gameBackgroundDiv}">
+  <g:HTMLPanel styleName="{css.gameBackgroundDiv}">  
     <g:PopupPanel ui:field="gamePopupPanel" styleName="{css.popup}"/>
+    <g:Label ui:field="aiMovesLabel" styleName="{css.warnLabel}"/> 
     <g:Label ui:field="warnLabel" styleName="{css.warnLabel}"/> 
   	<g:Label ui:field="turnLabel" styleName="{css.status}"/>
   	<g:Label ui:field="sideLabel" styleName="{css.sideLabel}"/> 
@@ -59,19 +60,19 @@
     <g:Label ui:field="opponentNameLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="matchIdLabel" styleName="{css.leftLabels}"/> 
     <g:Label ui:field="startDateLabel" styleName="{css.leftLabels}"/> 
-    
-    <g:Button text="Random new game" ui:field="automatchButton" styleName="{css.button}"/>
+    <g:Button text="" ui:field="aiIsSouthButton" styleName="{css.button}"/>
+    <g:Button text="" ui:field="aiIsNorthButton" styleName="{css.button}"/><br/>
+    <g:Button text="" ui:field="automatchButton" styleName="{css.button}"/>
     <g:HorizontalPanel spacing="10">
-      <g:TextBox ui:field="emailBox" text="Opponent's email address"/>
-      <g:Button ui:field="playButton" text="Play!" />
+      <g:TextBox ui:field="emailBox" text=""/>
+      <g:Button ui:field="playButton" text="" />
     </g:HorizontalPanel>
     <g:HorizontalPanel spacing="10">
       <g:ListBox ui:field="matchList">
         <g:item>
-          --Select Match--
         </g:item>
       </g:ListBox>
-      <g:Button ui:field="deleteButton" text = "Delete Match" />
+      <g:Button ui:field="deleteButton" text = "" />
     </g:HorizontalPanel>
     
   </g:HTMLPanel>

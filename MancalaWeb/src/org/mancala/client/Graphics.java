@@ -2,7 +2,7 @@ package org.mancala.client;
 
 import java.util.Date;
 
-import org.mancala.client.Presenter.View;
+import org.mancala.client.View;
 import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.MatchInfo;
 import org.mancala.shared.PlayerColor;
@@ -60,6 +60,7 @@ public class Graphics extends Composite implements View {
 	private static GameSounds gameSounds = GWT.create(GameSounds.class);
 	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
 	private static MancalaMessages messages = GWT.create(MancalaMessages.class);
+	private static MancalaServiceAsync mancalaService = GWT.create(MancalaService.class);
 
 	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
 	}
@@ -79,8 +80,7 @@ public class Graphics extends Composite implements View {
 	 */
 	private SeedMovingAnimation animation;
 	private FadeAnimation fadeAnimation;
-
-	private static MancalaServiceAsync mancalaService = GWT.create(MancalaService.class);
+	private AIAdditionalMoveAnimation aiAdditionalMoveAnimation;
 
 	/**
 	 * The audio sounds that are used in the game
@@ -90,9 +90,9 @@ public class Graphics extends Composite implements View {
 	Audio oppositeCaptureSound;
 
 	private Long matchId;
-
 	private String userId;
 	private String opponentId;
+	private boolean aiMatch;
 
 	/**
 	 * Note: UI is still proof of concept. I will add better images and better layout in the next homeworks The basis is an absolute
@@ -128,6 +128,9 @@ public class Graphics extends Composite implements View {
 	@UiField
 	Label warnLabel;
 
+	@UiField
+	Label aiMovesLabel;
+
 	/**
 	 * displays which side the user plays on
 	 */
@@ -162,6 +165,10 @@ public class Graphics extends Composite implements View {
 	Label opponentNameLabel;
 	@UiField
 	Label matchIdLabel;
+	@UiField
+	Button aiIsNorthButton;
+	@UiField
+	Button aiIsSouthButton;
 	@UiField
 	Button automatchButton;
 	@UiField
@@ -249,6 +256,7 @@ public class Graphics extends Composite implements View {
 
 		turnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
 		warnLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
+		aiMovesLabel.setHorizontalAlignment(Label.ALIGN_CENTER);
 
 		initializeAudios();
 		initializeHandlers();
@@ -260,7 +268,18 @@ public class Graphics extends Composite implements View {
 
 		setUserName("Nickname: " + nickName + " (" + playerRating + "|" + playerRD + ")");
 		setEmail("eMail: " + userEmail);
+		initializeUILanguage();
 
+	}
+
+	private void initializeUILanguage() {
+		matchList.setItemText(0, messages.selectMatch());
+		automatchButton.setText(messages.randomNewGame());
+		deleteButton.setText(messages.deleteGame());
+		playButton.setText(messages.play());
+		emailBox.setText(messages.opponentsEmail());
+		aiIsNorthButton.setText(messages.GameAiSouth());
+		aiIsSouthButton.setText(messages.GameAiNorth());
 	}
 
 	private void createChannel(String userToken) {
@@ -340,7 +359,11 @@ public class Graphics extends Composite implements View {
 							turnLabel.setText(messages.opponentsTurn());
 
 						State currentState = State.deserialize(mI.getState());
-						presenter.setState(currentState);
+
+						// replaced by animation
+						// presenter.setState(currentState);
+						presenter.setStateToSetAfterAnimation(currentState);
+						presenter.makeAnimatedMove(Integer.parseInt(mI.getMoveIndex()), presenter.getState().copyState());
 
 						if (currentState.isGameOver()) {
 							if (mI.getNorthPlayerId().equals(userId)) {
@@ -357,7 +380,6 @@ public class Graphics extends Composite implements View {
 							}
 						}
 
-						// TODO: Make animation work
 					}
 					else {
 						if (mI.getNorthPlayerId().equals(userId))
@@ -384,9 +406,98 @@ public class Graphics extends Composite implements View {
 	}
 
 	private void initializeHandlers() {
+		aiIsSouthButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				aiMatch = true;
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+
+						mancalaService.registerAiMatch(false, new AsyncCallback<String>() {
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.serverError());
+							}
+
+							@Override
+							public void onSuccess(String result) {
+								String[] tokens = result.split("#");
+
+								turnLabel.setText(messages.opponentsTurn());
+								opponentNameLabel.setText(messages.opponent() + "AI");
+								matchId = Long.valueOf(tokens[1]);
+								matchIdLabel.setText(tokens[1]);
+								startDateLabel.setText(getCustomLocalDate(Long.valueOf(tokens[3])));
+								sideLabel.setText(messages.playOnNorthSide());
+
+								presenter.setUsersSide(PlayerColor.N);
+								presenter.setState(new State());
+								presenter.disableBoard();
+								presenter.makeAiMove();
+							}
+						});
+					}
+
+					public void onFailure(Throwable caught) {
+						Window.alert("Error retrieving xsrf token! Please try again later.");
+					}
+				});
+			}
+		});
+
+		aiIsNorthButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				aiMatch = true;
+
+				// secured against xsrf attacks
+				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+				((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+				xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+					public void onSuccess(XsrfToken token) {
+						((HasRpcToken) mancalaService).setRpcToken(token);
+						mancalaService.registerAiMatch(true, new AsyncCallback<String>() {
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.serverError());
+							}
+
+							@Override
+							public void onSuccess(String result) {
+								String[] tokens = result.split("#");
+								updateMatchList();
+
+								turnLabel.setText(messages.itsYourTurn());
+								opponentNameLabel.setText(messages.opponent() + "AI");
+								matchId = Long.valueOf(tokens[1]);
+								matchIdLabel.setText(tokens[1]);
+								startDateLabel.setText(getCustomLocalDate(Long.valueOf(tokens[3])));
+								sideLabel.setText(messages.playOnSouthSide());
+
+								presenter.setUsersSide(PlayerColor.S);
+								presenter.setState(new State());
+							}
+						});
+					}
+
+					public void onFailure(Throwable caught) {
+						Window.alert("Error retrieving xsrf token! Please try again later.");
+					}
+				});
+			}
+		});
+
 		automatchButton.addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
+				aiMatch = false;
+
 				turnLabel.setText(messages.waitForOpponent());
 				opponentNameLabel.setText("");
 				matchId = null;
@@ -429,6 +540,8 @@ public class Graphics extends Composite implements View {
 					Window.alert(messages.invalidEmail());
 					return;
 				}
+				aiMatch = false;
+
 				// secured against xsrf attacks
 				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
 				XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
@@ -465,6 +578,8 @@ public class Graphics extends Composite implements View {
 		matchList.addChangeHandler(new ChangeHandler() {
 			@Override
 			public void onChange(ChangeEvent event) {
+				aiMatch = false;
+
 				final Long matchIDFromList = getSelectedMatch();
 				// secured against xsrf attacks
 				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
@@ -487,6 +602,7 @@ public class Graphics extends Composite implements View {
 
 									matchId = Long.valueOf(mI.getMatchId());
 									State newMatchState = State.deserialize(mI.getState());
+
 									String opponentName, opponentEmail, opponentRating, opponentRD;
 									if (mI.getNorthPlayerId().equals(userId)) {
 										opponentName = mI.getSouthPlayerName();
@@ -500,8 +616,16 @@ public class Graphics extends Composite implements View {
 										opponentRating = mI.getNorthPlayerRating();
 										opponentRD = mI.getNorthPlayerRD();
 									}
-									opponentNameLabel.setText(messages.opponent() + opponentName + " (" + opponentRating + "|" + opponentRD + ")");
-									opponentId = opponentEmail.toLowerCase();
+
+									if (opponentName.equals("AI")) {
+										aiMatch = true;
+
+										opponentNameLabel.setText("AI");
+									}
+									else {
+										opponentNameLabel.setText(messages.opponent() + opponentName + " (" + opponentRating + "|" + opponentRD + ")");
+										opponentId = opponentEmail.toLowerCase();
+									}
 
 									matchIdLabel.setText("MatchID: " + matchId);
 
@@ -516,11 +640,14 @@ public class Graphics extends Composite implements View {
 										usersSide = newMatchState.getWhoseTurn().getOpposite();
 									}
 									presenter.setUsersSide(usersSide);
-									if (usersSide.equals(PlayerColor.N))
+									if (usersSide.isNorth())
 										sideLabel.setText(messages.playOnNorthSide());
 									else
 										sideLabel.setText(messages.playOnSouthSide());
 									presenter.setState(newMatchState);
+
+									if (mI.getUserIdOfWhoseTurnItIs().equals("AI")) // Can be caused due to un-updated AI turn
+										presenter.makeAiMove();
 								}
 							}
 						});
@@ -558,7 +685,20 @@ public class Graphics extends Composite implements View {
 
 							@Override
 							public void onSuccess(Void result) {
-								mancalaService.loadMatches(loadMatchesCallback);
+								// secured against xsrf attacks
+								// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+								XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+								((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+								xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+									public void onSuccess(XsrfToken token) {
+										((HasRpcToken) mancalaService).setRpcToken(token);
+										mancalaService.loadMatches(loadMatchesCallback);
+									}
+
+									public void onFailure(Throwable caught) {
+										Window.alert("Error retrieving xsrf token! Please try again later.");
+									}
+								});
 							}
 						});
 					}
@@ -718,6 +858,19 @@ public class Graphics extends Composite implements View {
 		}
 
 		return point;
+	}
+
+	private int[] getCirclePoint(int index) {
+		int points = 7;
+		int radius = 25;
+		double slice = 2 * Math.PI / points;
+
+		double angle = slice * index;
+		double newX = 25 + radius * Math.cos(angle);
+		double newY = 20 + radius * Math.sin(angle);
+
+		return new int[] { (int) newX, (int) newY };
+
 	}
 
 	/**
@@ -1031,6 +1184,11 @@ public class Graphics extends Composite implements View {
 		final Integer fChosenIndex = chosenIndex;
 		final String fStateString = stateString;
 
+		if (aiMatch) {
+			sendMoveToServerAI(chosenIndex, State.deserialize(stateString));
+			return;
+		}
+
 		// secured against xsrf attacks
 		// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
 		XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
@@ -1056,6 +1214,50 @@ public class Graphics extends Composite implements View {
 			}
 		});
 
+	}
+
+	@Override
+	public boolean getAiMatch() {
+		return aiMatch;
+	}
+
+	@Override
+	public void sendMoveToServerAI(Integer chosenIndex, State state) {
+		final Integer fChosenIndex = chosenIndex;
+		final State fState = state;
+		final Graphics graphicsForAnim = this;
+
+		// secured against xsrf attacks
+		// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+		XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+		((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+		xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+			public void onSuccess(XsrfToken token) {
+				((HasRpcToken) mancalaService).setRpcToken(token);
+				mancalaService.saveAiMove(matchId, fChosenIndex + "", State.serialize(fState), new AsyncCallback<Void>() {
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(messages.serverError());
+					}
+
+					@Override
+					public void onSuccess(Void result) {
+						if (fState.getWhoseTurn().equals(presenter.getUsersSide().getOpposite())) {
+							aiMovesLabel.setText(messages.aiMakesMove());
+							aiMovesLabel.getElement().getStyle().setOpacity(1);
+							aiAdditionalMoveAnimation = new AIAdditionalMoveAnimation(aiMovesLabel.getElement(), graphicsForAnim);
+							aiAdditionalMoveAnimation.fade(2000, 0, 1000);
+						}
+
+						updateMatchList();
+					}
+				});
+			}
+
+			public void onFailure(Throwable caught) {
+				Window.alert("Error retrieving xsrf token! Please try again later.");
+			}
+		});
 	}
 
 	@Override
@@ -1101,6 +1303,55 @@ public class Graphics extends Composite implements View {
 		// clean up whitespace
 		tmp = tmp.replaceAll("\\s+", " ").trim();
 		return tmp;
+	}
+
+	@Override
+	public void windowAlert(String alertMessage) {
+		Window.alert(alertMessage);
+	}
+
+	// @Override
+	// public void saveMoveInServer(Integer aiMove, State state) {
+	// final Integer fAiMove = aiMove;
+	// final State fState = state;
+	// final Graphics graphicsForAnim = this;
+	//
+	// // secured against xsrf attacks
+	// // see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html
+	// XsrfTokenServiceAsync xsrf = (XsrfTokenServiceAsync) GWT.create(XsrfTokenService.class);
+	// ((ServiceDefTarget) xsrf).setServiceEntryPoint(GWT.getModuleBaseURL() + "gwt/xsrf");
+	// xsrf.getNewXsrfToken(new AsyncCallback<XsrfToken>() {
+	// public void onSuccess(XsrfToken token) {
+	// ((HasRpcToken) mancalaService).setRpcToken(token);
+	//
+	// mancalaService.saveAiMove(matchId, fAiMove + "", State.serialize(fState), new AsyncCallback<Void>() {
+	// @Override
+	// public void onFailure(Throwable caught) {
+	// Window.alert(messages.serverError());
+	// }
+	//
+	// @Override
+	// public void onSuccess(Void result) {
+	// updateMatchList();
+	// if (fState.getWhoseTurn().equals(presenter.getUsersSide().getOpposite())) {
+	// warnLabel.setText("AI makes another move");
+	// warnLabel.getElement().getStyle().setOpacity(1);
+	// aiAdditionalMoveAnimation = new AIAdditionalMoveAnimation(warnLabel.getElement(), graphicsForAnim);
+	// aiAdditionalMoveAnimation.fade(6000, 0, 3000);
+	// }
+	//
+	// }
+	// });
+	// }
+	//
+	// public void onFailure(Throwable caught) {
+	// Window.alert("Error retrieving xsrf token! Please try again later.");
+	// }
+	// });
+	// }
+
+	public void afterAIAdditionalMoveAnimation() {
+		presenter.makeAiMove();
 	}
 
 }
