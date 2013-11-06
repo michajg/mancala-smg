@@ -19,6 +19,10 @@
   <!-- <inherits name='com.google.gwt.user.theme.chrome.Chrome'/> -->
   <!-- <inherits name='com.google.gwt.user.theme.dark.Dark'/>     -->
 
+
+  <!-- Google Guava for GWT                                       -->
+  <inherits name='com.google.common.collect.Collect'/>
+
   <!-- Other module inherits 																			-->
   <inherits name='com.googlecode.objectify.Objectify' />
   <inherits name="com.google.gwt.i18n.I18N"/>

@@ -18,4 +18,8 @@ public interface MancalaServiceAsync {
 
 	void makeMove(Long matchId, Integer chosenIndex, String stateString, AsyncCallback<Void> callback);
 
+	void registerAiMatch(boolean aiIsNorth, AsyncCallback<String> asyncCallback);
+
+	void saveAiMove(Long matchId, String moveString, String stateString, AsyncCallback<Void> asyncCallback);
+
 }

@@ -20,4 +20,8 @@ public interface MancalaService extends XsrfProtectedService {
 
 	public void makeMove(Long matchId, Integer chosenIndex, String stateString);
 
+	public String registerAiMatch(boolean aiIsNorth);
+
+	public void saveAiMove(Long matchId, String moveString, String stateString);
+
 }

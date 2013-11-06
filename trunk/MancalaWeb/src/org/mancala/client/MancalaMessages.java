@@ -91,4 +91,24 @@ public interface MancalaMessages extends Messages {
 	@DefaultMessage("Play again")
 	String playAgain();
 
+	@DefaultMessage("Game against AI as North")
+	String GameAiNorth();
+
+	@DefaultMessage("Game against AI as South")
+	String GameAiSouth();
+
+	@DefaultMessage("Game against random real Person")
+	String randomNewGame();
+
+	@DefaultMessage("Opponents email address")
+	String opponentsEmail();
+
+	@DefaultMessage("Play!")
+	String play();
+
+	@DefaultMessage("Delete Game")
+	String deleteGame();
+
+	@DefaultMessage("AI makes a Move")
+	String aiMakesMove();
 }

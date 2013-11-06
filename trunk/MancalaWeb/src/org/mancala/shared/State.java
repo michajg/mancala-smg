@@ -136,8 +136,13 @@ public class State {
 		int[] activePits = getPitsOfWhoseTurn();
 		int startPlacingSeedsAtThisIndex = chosenPitIndex + 1;
 		int seeds = activePits[chosenPitIndex];
-		if (seeds <= 0)
+		if (seeds <= 0) {
+			System.out.println("state: " + this);
+			System.out.println("seeds: " + seeds);
+			System.out.println("index: " + chosenPitIndex);
 			throw new IllegalMoveException();
+		}
+
 		boolean dealTreasureChest = true;
 		int potentialLastIndex = seeds + startPlacingSeedsAtThisIndex;
 		int stopPlacingSeedsAtThisIndex = (potentialLastIndex < activePits.length) ? potentialLastIndex : activePits.length;
