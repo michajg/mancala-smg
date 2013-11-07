@@ -12,14 +12,20 @@
 //See the License for the specific language governing permissions and
 //limitations under the License.
 ////////////////////////////////////////////////////////////////////////////////
-
-package org.mancala.shared;
+package org.mancala.shared.exception;
 
 /**
 * @author yzibin@google.com (Yoav Zibin)
-*
+* Describe an illegal move.
 */
-public class GameOverException extends RuntimeException {
-
+public class IllegalMoveException extends RuntimeException {
 private static final long serialVersionUID = 1L;
+
+public IllegalMoveException() {
+ super();
+}  
+
+public IllegalMoveException(String message) {
+ super(message);
+}  
 }

@@ -1,6 +1,8 @@
-package org.mancala.client;
+package org.mancala.client.animation;
 
 import java.math.BigDecimal;
+
+import org.mancala.client.Graphics;
 
 import com.google.gwt.animation.client.Animation;
 import com.google.gwt.user.client.Element;

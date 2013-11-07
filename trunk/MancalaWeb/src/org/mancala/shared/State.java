@@ -2,6 +2,9 @@ package org.mancala.shared;
 
 import java.util.Arrays;
 
+import org.mancala.shared.exception.GameOverException;
+import org.mancala.shared.exception.IllegalMoveException;
+
 /**
  * The MVP-Model for the Mancala game
  * 

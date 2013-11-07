@@ -1,15 +1,22 @@
 package org.mancala.client;
 
-import org.mancala.shared.AlphaBetaPruning;
-import org.mancala.shared.DateTimer;
-import org.mancala.shared.GameOverException;
-import org.mancala.shared.Heuristic;
-import org.mancala.shared.IllegalMoveException;
+import org.mancala.client.i18n.MancalaMessages;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
+import org.mancala.shared.ai.AlphaBetaPruning;
+import org.mancala.shared.ai.DateTimer;
+import org.mancala.shared.ai.Heuristic;
+import org.mancala.shared.exception.GameOverException;
+import org.mancala.shared.exception.IllegalMoveException;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.HasRpcToken;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.rpc.XsrfToken;
+import com.google.gwt.user.client.rpc.XsrfTokenService;
+import com.google.gwt.user.client.rpc.XsrfTokenServiceAsync;
 
 /**
  * The MVP-Presenter of the Mancala game

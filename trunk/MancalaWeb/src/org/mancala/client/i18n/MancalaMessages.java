@@ -1,4 +1,4 @@
-package org.mancala.client;
+package org.mancala.client.i18n;
 
 import com.google.gwt.i18n.client.LocalizableResource.DefaultLocale;
 import com.google.gwt.i18n.client.LocalizableResource.Generate;

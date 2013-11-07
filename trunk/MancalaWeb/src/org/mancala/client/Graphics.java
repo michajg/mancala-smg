@@ -3,10 +3,18 @@ package org.mancala.client;
 import java.util.Date;
 
 import org.mancala.client.View;
-import org.mancala.shared.IllegalMoveException;
+import org.mancala.client.animation.AIAdditionalMoveAnimation;
+import org.mancala.client.animation.FadeAnimation;
+import org.mancala.client.animation.SeedMovingAnimation;
+import org.mancala.client.audio.GameSounds;
+import org.mancala.client.i18n.MancalaMessages;
+import org.mancala.client.img.GameImages;
+import org.mancala.client.services.MancalaService;
+import org.mancala.client.services.MancalaServiceAsync;
 import org.mancala.shared.MatchInfo;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
+import org.mancala.shared.exception.IllegalMoveException;
 
 import com.google.gwt.appengine.channel.client.Channel;
 import com.google.gwt.appengine.channel.client.ChannelError;
@@ -409,6 +417,7 @@ public class Graphics extends Composite implements View {
 		aiIsSouthButton.addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
+
 				aiMatch = true;
 				// secured against xsrf attacks
 				// see http://www.gwtproject.org/doc/latest/DevGuideSecurityRpcXsrf.html

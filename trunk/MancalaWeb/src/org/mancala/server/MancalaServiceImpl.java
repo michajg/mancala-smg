@@ -7,13 +7,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import org.mancala.client.MancalaService;
-import org.mancala.shared.GlickoRating;
+import org.mancala.client.services.MancalaService;
 import org.mancala.shared.Match;
 import org.mancala.shared.MatchInfo;
 import org.mancala.shared.Player;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
+import org.mancala.shared.rating.GlickoRating;
 
 import com.google.appengine.api.channel.ChannelMessage;
 import com.google.appengine.api.channel.ChannelService;

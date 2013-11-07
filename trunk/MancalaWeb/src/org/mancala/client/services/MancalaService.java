@@ -1,4 +1,4 @@
-package org.mancala.client;
+package org.mancala.client.services;
 
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 import com.google.gwt.user.client.rpc.XsrfProtectedService;

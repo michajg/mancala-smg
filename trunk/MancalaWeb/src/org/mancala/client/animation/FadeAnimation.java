@@ -1,4 +1,4 @@
-package org.mancala.client;
+package org.mancala.client.animation;
 
 import java.math.BigDecimal;
 
