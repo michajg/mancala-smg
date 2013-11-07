@@ -3,10 +3,10 @@ package org.mancala.shared;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.mancala.shared.GameOverException;
-import org.mancala.shared.IllegalMoveException;
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
+import org.mancala.shared.exception.GameOverException;
+import org.mancala.shared.exception.IllegalMoveException;
 public class StateTest {
 	
 	public final int[] STANDARD_PITS = {4,4,4,4,4,4,0};

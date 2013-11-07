@@ -1,4 +1,4 @@
-package org.mancala.shared;
+package org.mancala.shared.rating;
 
 import java.util.Date;
 

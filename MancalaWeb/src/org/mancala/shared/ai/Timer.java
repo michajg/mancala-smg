@@ -1,4 +1,4 @@
-package org.mancala.shared;
+package org.mancala.shared.ai;
 
 /**
  * Timer interface

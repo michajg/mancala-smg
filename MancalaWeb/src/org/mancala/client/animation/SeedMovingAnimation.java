@@ -1,4 +1,6 @@
-package org.mancala.client;
+package org.mancala.client.animation;
+
+import org.mancala.client.Graphics;
 
 import com.google.gwt.animation.client.Animation;
 import com.google.gwt.media.client.Audio;

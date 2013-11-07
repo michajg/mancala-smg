@@ -12,7 +12,7 @@
 //See the License for the specific language governing permissions and
 //limitations under the License.
 ////////////////////////////////////////////////////////////////////////////////
-package org.mancala.shared;
+package org.mancala.shared.ai;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,6 +21,10 @@ import java.util.List;
 //import org.gaming.shared.games.MatchMove;
 //import org.mancala.shared.PlayerColor;
 //import org.gaming.shared.games.turn_based.TurnBasedState;
+
+
+import org.mancala.shared.PlayerColor;
+import org.mancala.shared.State;
 
 import com.google.common.collect.Lists;
 

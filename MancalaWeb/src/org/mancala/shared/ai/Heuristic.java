@@ -1,4 +1,4 @@
-package org.mancala.shared;
+package org.mancala.shared.ai;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -6,7 +6,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.mancala.shared.AlphaBetaPruning.MoveScore;
+import org.mancala.shared.State;
+import org.mancala.shared.ai.AlphaBetaPruning.MoveScore;
+import org.mancala.shared.exception.IllegalMoveException;
 
 import com.google.common.collect.Sets;
 import com.google.common.collect.Lists;

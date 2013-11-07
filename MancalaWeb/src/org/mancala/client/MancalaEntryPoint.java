@@ -1,5 +1,10 @@
 package org.mancala.client;
 
+import org.mancala.client.services.LoginService;
+import org.mancala.client.services.LoginServiceAsync;
+import org.mancala.client.services.MancalaService;
+import org.mancala.client.services.MancalaServiceAsync;
+
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.user.client.Cookies;

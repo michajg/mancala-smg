@@ -1,7 +1,7 @@
 package org.mancala.server;
 
 import org.mancala.client.LoginInfo;
-import org.mancala.client.LoginService;
+import org.mancala.client.services.LoginService;
 
 import com.google.appengine.api.channel.ChannelService;
 import com.google.appengine.api.channel.ChannelServiceFactory;
