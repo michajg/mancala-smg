@@ -39,45 +39,40 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 	}
 
 	ChannelService channelService = ChannelServiceFactory.getChannelService();
-	UserService userService = UserServiceFactory.getUserService();
 	private DecimalFormat decimal = new DecimalFormat("#.##");
 	private final String INITIAL_STATE_STRING = "4,4,4,4,4,4,0_4,4,4,4,4,4,0_S_F_F_0";
+	private final String TEST_STATE_STRING = "0,0,0,0,0,0,25_0,0,0,0,0,1,22_S_F_F_0";
 
 	@Override
-	public String connectPlayer() {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
+	public String connectPlayer(String playerId, String name) {
+		String channelId = playerId;
 
-			String channelId = user.getEmail().toLowerCase();
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
 
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			Player player = ofy().load().key(playerKey).now();
-
-			if (player == null) { // New player
-				player = new Player(user.getEmail().toLowerCase(), user.getNickname());
-			}
-			double rating = player.getRating();
-			double RD = player.getRD();
-			ofy().save().entity(player).now();
-
-			String token = channelService.createChannel(channelId) + "#" + decimal.format(rating) + "#" + decimal.format(RD);
-			return token;
+		if (player == null) { // New player
+			player = new Player(playerId, name);
 		}
-		return null;
+		double rating = player.getRating();
+		double RD = player.getRD();
+		ofy().save().entity(player).now();
+
+		String token = channelService.createChannel(channelId) + "#" + playerId + "#" + name + "#" + decimal.format(rating) + "#"
+				+ decimal.format(RD);
+		return token;
 	}
 
 	@Override
-	public String[] loadMatches() {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
+	public String[] loadMatches(String playerId) {
 
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			Player player = ofy().load().key(playerKey).now();
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
 
-			String[] matches = new String[player.getMatchesList().size()];
-			Set<Key<Match>> matchesList = player.getMatchesList();
+		String[] matches = new String[player.getMatchesList().size()];
+		Set<Key<Match>> matchesList = player.getMatchesList();
 
-			int index = 0;
+		int index = 0;
+		if (matchesList.size() > 0) {
 			for (Key<Match> matchKey : matchesList) {
 				Match match = ofy().load().key(matchKey).now();
 				if (match == null) {
@@ -97,11 +92,11 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 					northPlayer = opponent;
 					southPlayer = player;
 				}
-				matchInfo.setNorthPlayerId(northPlayer.getEmail());
+				matchInfo.setNorthPlayerId(northPlayer.getId());
 				matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
 				matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
 				matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
-				matchInfo.setSouthPlayerId(southPlayer.getEmail());
+				matchInfo.setSouthPlayerId(southPlayer.getId());
 				matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
 				matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
 				matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
@@ -109,10 +104,10 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 				matchInfo.setState(match.getState());
 				matchInfo.setMoveIndex(-1 + "");
 				if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
-					matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
+					matchInfo.setUserIdOfWhoseTurnItIs(player.getId());
 				}
 				else {
-					matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
+					matchInfo.setUserIdOfWhoseTurnItIs(opponent.getId());
 				}
 				matchInfo.setStartDate(match.getStartDate() + "");
 				matchInfo.setAction("loadMatches");
@@ -122,277 +117,200 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 
 				ofy().save().entities(match, opponent).now();
 			}
-			ofy().save().entity(player).now();
-			return matches;
 		}
-		return null;
+		else
+			return null;
+		ofy().save().entity(player).now();
+		return matches;
+
 	}
 
 	@Override
-	public void automatch() {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
+	public Boolean startGame(String playerId, String opponentId, String opponentName) {
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
+		if (player.getId().equals(opponentId))
+			return null;
 
-			final Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			final Player player = ofy().load().key(playerKey).now();
-			// Get list of players waiting to be automatched
-			List<Player> otherPlayers = ofy().load().type(Player.class).filter("automatchPooled", true).list();
-
-			// If there are no other players add him to the automatch pool
-			if (otherPlayers.isEmpty()) {
-				player.setAutomatchEligible(true);
-				ofy().save().entity(player).now();
-			}
-			else {
-				final Player opponent;
-				// Extract a random waiting player
-				if (otherPlayers.get(0).equals(player)) {
-					if (otherPlayers.size() > 1 && !otherPlayers.get(1).equals(player))
-						opponent = otherPlayers.remove(1);
-					else
-						return; // Can't play against the same player
-				}
-				else
-					opponent = otherPlayers.remove(0);
-
-				opponent.setAutomatchEligible(false); // Remove this player from the automatch pool
-
-				final Key<Player> opponentKey = Key.create(Player.class, opponent.getEmail());
-				Match match = new Match(opponentKey, playerKey, INITIAL_STATE_STRING);
-				Key<Match> matchKey = ofy().save().entity(match).now();
-				player.addMatch(matchKey);
-				opponent.addMatch(matchKey);
-				ofy().save().entities(player, opponent, match).now();
-
-				// Send both players the matchInfo message
-				MatchInfo matchInfo = new MatchInfo();
-
-				matchInfo.setMatchId(match.getMatchId() + "");
-				matchInfo.setNorthPlayerId(opponent.getEmail());
-				matchInfo.setNorthPlayerName(opponent.getPlayerName());
-				matchInfo.setNorthPlayerRating(decimal.format(opponent.getRating()));
-				matchInfo.setNorthPlayerRD(decimal.format(opponent.getRD()));
-				matchInfo.setSouthPlayerId(player.getEmail());
-				matchInfo.setSouthPlayerName(player.getPlayerName());
-				matchInfo.setSouthPlayerRating(decimal.format(player.getRating()));
-				matchInfo.setSouthPlayerRD(decimal.format(player.getRD()));
-				matchInfo.setState(match.getState());
-				matchInfo.setMoveIndex(-1 + "");
-				matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
-				matchInfo.setStartDate(match.getStartDate() + "");
-				matchInfo.setAction("newgame");
-
-				String message = MatchInfo.serialize(matchInfo);
-
-				Set<String> tokens1 = opponent.getConnectedTokens();
-				Set<String> tokens2 = player.getConnectedTokens();
-				for (String connection : tokens1) {
-					channelService.sendMessage(new ChannelMessage(connection, message));
-				}
-				for (String connection : tokens2) {
-					channelService.sendMessage(new ChannelMessage(connection, message));
-				}
-			}
+		Key<Player> opponentKey = Key.create(Player.class, opponentId);
+		Player opponent = ofy().load().key(opponentKey).now();
+		if (opponent == null) {
+			// No such player exists in the data store
+			connectPlayer(opponentId, opponentName);
+			opponent = ofy().load().key(opponentKey).now();
+			// return new Boolean(false);
 		}
+
+		Match match = new Match(opponentKey, playerKey, INITIAL_STATE_STRING);
+		Key<Match> matchKey = ofy().save().entity(match).now();
+		player.addMatch(matchKey);
+		opponent.addMatch(matchKey);
+
+		// Send both players matchInfo message
+		MatchInfo matchInfo = new MatchInfo();
+		matchInfo.setMatchId(match.getMatchId() + "");
+		matchInfo.setNorthPlayerId(opponent.getId());
+		matchInfo.setNorthPlayerName(opponent.getPlayerName());
+		matchInfo.setNorthPlayerRating(decimal.format(opponent.getRating()));
+		matchInfo.setNorthPlayerRD(decimal.format(opponent.getRD()));
+		matchInfo.setSouthPlayerId(player.getId());
+		matchInfo.setSouthPlayerName(player.getPlayerName());
+		matchInfo.setSouthPlayerRating(decimal.format(player.getRating()));
+		matchInfo.setSouthPlayerRD(decimal.format(player.getRD()));
+		matchInfo.setState(match.getState());
+		matchInfo.setMoveIndex(-1 + "");
+		matchInfo.setUserIdOfWhoseTurnItIs(player.getId());
+		matchInfo.setStartDate(match.getStartDate() + "");
+		matchInfo.setAction("newgame");
+		String message = MatchInfo.serialize(matchInfo);
+
+		Set<String> tokens1 = player.getConnectedTokens();
+		Set<String> tokens2 = opponent.getConnectedTokens();
+		ofy().save().entities(player, opponent, match).now();
+		for (String connection : tokens1) {
+			channelService.sendMessage(new ChannelMessage(connection, message));
+		}
+		for (String connection : tokens2) {
+			channelService.sendMessage(new ChannelMessage(connection, message));
+		}
+		return new Boolean(true);
+
 	}
 
 	@Override
-	public Boolean newEmailGame(String email) {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			Player player = ofy().load().key(playerKey).now();
-			if (player.getEmail().equals(email.toLowerCase()))
-				return null;
+	public void deleteMatch(String playerId, Long matchId) {
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
 
-			Key<Player> opponentKey = Key.create(Player.class, email.toLowerCase());
-			Player opponent = ofy().load().key(opponentKey).now();
-			if (opponent == null) {
-				// No such player exists in the data store
-				return new Boolean(false);
-			}
-			Match match = new Match(opponentKey, playerKey, INITIAL_STATE_STRING);
-			Key<Match> matchKey = ofy().save().entity(match).now();
-			player.addMatch(matchKey);
-			opponent.addMatch(matchKey);
-
-			// Send both players matchInfo message
-			MatchInfo matchInfo = new MatchInfo();
-			matchInfo.setMatchId(match.getMatchId() + "");
-			matchInfo.setNorthPlayerId(opponent.getEmail());
-			matchInfo.setNorthPlayerName(opponent.getPlayerName());
-			matchInfo.setNorthPlayerRating(decimal.format(opponent.getRating()));
-			matchInfo.setNorthPlayerRD(decimal.format(opponent.getRD()));
-			matchInfo.setSouthPlayerId(player.getEmail());
-			matchInfo.setSouthPlayerName(player.getPlayerName());
-			matchInfo.setSouthPlayerRating(decimal.format(player.getRating()));
-			matchInfo.setSouthPlayerRD(decimal.format(player.getRD()));
-			matchInfo.setState(match.getState());
-			matchInfo.setMoveIndex(-1 + "");
-			matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
-			matchInfo.setStartDate(match.getStartDate() + "");
-			matchInfo.setAction("newgame");
-			String message = MatchInfo.serialize(matchInfo);
-
-			Set<String> tokens1 = player.getConnectedTokens();
-			Set<String> tokens2 = opponent.getConnectedTokens();
-			ofy().save().entities(player, opponent, match).now();
-			for (String connection : tokens1) {
-				channelService.sendMessage(new ChannelMessage(connection, message));
-			}
-			for (String connection : tokens2) {
-				channelService.sendMessage(new ChannelMessage(connection, message));
-			}
-			return new Boolean(true);
-		}
-		return new Boolean(false);
-	}
-
-	@Override
-	public void deleteMatch(Long matchId) {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
-
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			Player player = ofy().load().key(playerKey).now();
-
-			Key<Match> matchKey = Key.create(Match.class, matchId);
-
+		Key<Match> matchKey = Key.create(Match.class, matchId);
+		Match match = ofy().load().key(matchKey).now();
+		if (match != null) {
 			// Remove match from this player
 			player.removeMatch(matchKey);
 
-			ofy().save().entity(player).now();
-
-			Match match = ofy().load().key(matchKey).now();
-
 			Player opponent = ofy().load().key(match.getOpponent(playerKey)).now();
+			opponent.removeMatch(matchKey);
 
-			if (!opponent.containsMatchKey(matchKey)) {
-				// Delete the match from the datastore, if opponent has also deleted it
-				ofy().delete().entity(match);
-			}
-			ofy().save().entities(match, opponent).now();
+			// Delete the match from the datastore, if opponent has also deleted it
+			ofy().delete().entity(match);
+
+			ofy().save().entities(player, opponent, match).now();
 		}
 	}
 
 	@Override
-	public String changeMatch(Long matchId) {
-		if (userService.isUserLoggedIn()) {
-			if (matchId == null) {
-				return "noMatch";
-			}
+	public String changeMatch(String playerId, Long matchId) {
 
-			User user = userService.getCurrentUser();
-
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			Player player = ofy().load().key(playerKey).now();
-
-			Key<Match> matchKey = Key.create(Match.class, matchId);
-			Match match = ofy().load().key(matchKey).now();
-
-			Key<Player> opponentKey = match.getOpponent(playerKey);
-			Player opponent = ofy().load().key(opponentKey).now();
-
-			MatchInfo matchInfo = new MatchInfo();
-			matchInfo.setMatchId(matchId + "");
-			Player northPlayer, southPlayer;
-			if (match.isNorthPlayer(playerKey)) {
-				northPlayer = player;
-				southPlayer = opponent;
-			}
-			else {
-				northPlayer = opponent;
-				southPlayer = player;
-			}
-			matchInfo.setNorthPlayerId(northPlayer.getEmail());
-			matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
-			matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
-			matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
-			matchInfo.setSouthPlayerId(southPlayer.getEmail());
-			matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
-			matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
-			matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
-			matchInfo.setState(match.getState());
-			matchInfo.setMoveIndex(-1 + "");
-
-			if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
-				matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
-			}
-			else {
-				matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
-			}
-			matchInfo.setStartDate(match.getStartDate() + "");
-			matchInfo.setAction("changeMatch");
-
-			String message = MatchInfo.serialize(matchInfo);
-
-			ofy().save().entities(match, player, opponent).now();
-			return message;
+		if (matchId == null) {
+			return "noMatch";
 		}
-		return null;
+
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
+
+		Key<Match> matchKey = Key.create(Match.class, matchId);
+		Match match = ofy().load().key(matchKey).now();
+
+		Key<Player> opponentKey = match.getOpponent(playerKey);
+		Player opponent = ofy().load().key(opponentKey).now();
+
+		MatchInfo matchInfo = new MatchInfo();
+		matchInfo.setMatchId(matchId + "");
+		Player northPlayer, southPlayer;
+		if (match.isNorthPlayer(playerKey)) {
+			northPlayer = player;
+			southPlayer = opponent;
+		}
+		else {
+			northPlayer = opponent;
+			southPlayer = player;
+		}
+		matchInfo.setNorthPlayerId(northPlayer.getId());
+		matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+		matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+		matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+		matchInfo.setSouthPlayerId(southPlayer.getId());
+		matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+		matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+		matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
+		matchInfo.setState(match.getState());
+		matchInfo.setMoveIndex(-1 + "");
+
+		if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
+			matchInfo.setUserIdOfWhoseTurnItIs(player.getId());
+		}
+		else {
+			matchInfo.setUserIdOfWhoseTurnItIs(opponent.getId());
+		}
+		matchInfo.setStartDate(match.getStartDate() + "");
+		matchInfo.setAction("changeMatch");
+
+		String message = MatchInfo.serialize(matchInfo);
+
+		ofy().save().entities(match, player, opponent).now();
+		return message;
+
 	}
 
 	@Override
-	public void makeMove(Long matchId, Integer chosenIndex, String state) {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
+	public void makeMove(String playerId, Long matchId, Integer chosenIndex, String state) {
 
-			Key<Match> matchKey = Key.create(Match.class, matchId);
-			Match match = ofy().load().key(matchKey).now();
-			match.setState(state);
+		Key<Match> matchKey = Key.create(Match.class, matchId);
+		Match match = ofy().load().key(matchKey).now();
+		match.setState(state);
 
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
-			Player player = ofy().load().key(playerKey).now();
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
 
-			Key<Player> opponentKey = match.getOpponent(playerKey);
-			Player opponent = ofy().load().key(opponentKey).now();
+		Key<Player> opponentKey = match.getOpponent(playerKey);
+		Player opponent = ofy().load().key(opponentKey).now();
 
-			ofy().save().entities(match, opponent, player).now();
+		ofy().save().entities(match, opponent, player).now();
 
-			State currentState = State.deserialize(match.getState());
-			if (currentState.isGameOver())
-				changeGeckoRatings(currentState, match, playerKey, opponentKey, player, opponent);
+		State currentState = State.deserialize(match.getState());
+		if (currentState.isGameOver())
+			changeGeckoRatings(currentState, match, playerKey, opponentKey, player, opponent);
 
-			MatchInfo matchInfo = new MatchInfo();
-			matchInfo.setMatchId(matchId + "");
-			Player northPlayer, southPlayer;
-			if (match.isNorthPlayer(playerKey)) {
-				northPlayer = player;
-				southPlayer = opponent;
-			}
-			else {
-				northPlayer = opponent;
-				southPlayer = player;
-			}
-			matchInfo.setNorthPlayerId(northPlayer.getEmail());
-			matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
-			matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
-			matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
-			matchInfo.setSouthPlayerId(southPlayer.getEmail());
-			matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
-			matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
-			matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
-			matchInfo.setState(state);
-			matchInfo.setMoveIndex(chosenIndex + "");
-			if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
-				matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
-			}
-			else {
-				matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
-			}
-			matchInfo.setStartDate(match.getStartDate() + "");
-			matchInfo.setAction("move");
-			String message = MatchInfo.serialize(matchInfo);
-
-			Set<String> tokens1 = player.getConnectedTokens();
-			for (String connection : tokens1) {
-				channelService.sendMessage(new ChannelMessage(connection, message));
-			}
-			Set<String> tokens2 = opponent.getConnectedTokens();
-			for (String connection : tokens2) {
-				channelService.sendMessage(new ChannelMessage(connection, message));
-			}
+		MatchInfo matchInfo = new MatchInfo();
+		matchInfo.setMatchId(matchId + "");
+		Player northPlayer, southPlayer;
+		if (match.isNorthPlayer(playerKey)) {
+			northPlayer = player;
+			southPlayer = opponent;
 		}
+		else {
+			northPlayer = opponent;
+			southPlayer = player;
+		}
+		matchInfo.setNorthPlayerId(northPlayer.getId());
+		matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+		matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+		matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+		matchInfo.setSouthPlayerId(southPlayer.getId());
+		matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+		matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+		matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
+		matchInfo.setState(state);
+		matchInfo.setMoveIndex(chosenIndex + "");
+		if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
+			matchInfo.setUserIdOfWhoseTurnItIs(player.getId());
+		}
+		else {
+			matchInfo.setUserIdOfWhoseTurnItIs(opponent.getId());
+		}
+		matchInfo.setStartDate(match.getStartDate() + "");
+		matchInfo.setAction("move");
+		String message = MatchInfo.serialize(matchInfo);
+
+		Set<String> tokens1 = player.getConnectedTokens();
+		for (String connection : tokens1) {
+			channelService.sendMessage(new ChannelMessage(connection, message));
+		}
+		Set<String> tokens2 = opponent.getConnectedTokens();
+		for (String connection : tokens2) {
+			channelService.sendMessage(new ChannelMessage(connection, message));
+		}
+
 	}
 
 	private void changeGeckoRatings(State state, Match match, Key<Player> playerKey, Key<Player> opponentKey, Player player,
@@ -426,47 +344,213 @@ public class MancalaServiceImpl extends XsrfProtectedServiceServlet implements M
 	}
 
 	@Override
-	public String registerAiMatch(boolean aiIsNorth) {
-		if (userService.isUserLoggedIn()) {
-			User user = userService.getCurrentUser();
-			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
-			Player player = ofy().load().key(playerKey).now();
+	public String registerAiMatch(String playerId, boolean aiIsNorth) {
 
-			Key<Player> aiKey = Key.create(Player.class, "AI");
-			Player aiPlayer = ofy().load().key(aiKey).now();
-			if (aiPlayer == null) { // register aiplayer in the server
-				aiPlayer = new Player("AI", "AI");
-			}
-			ofy().save().entity(aiPlayer).now();
+		Key<Player> playerKey = Key.create(Player.class, playerId);
+		Player player = ofy().load().key(playerKey).now();
 
-			Match match;
-			if (aiIsNorth) {
-				match = new Match(aiKey, playerKey, INITIAL_STATE_STRING);
-			}
-			else {
-				match = new Match(playerKey, aiKey, INITIAL_STATE_STRING);
-			}
-			match.setSingleGame(true);
-			Key<Match> matchKey = ofy().save().entity(match).now();
-
-			Long matchDate = match.getStartDate();
-			player.addMatch(matchKey);
-			String message1 = "newAIgame#" + match.getMatchId() + "#S#" + matchDate;
-			ofy().save().entities(player, match).now();
-			return message1;
+		Key<Player> aiKey = Key.create(Player.class, "AI");
+		Player aiPlayer = ofy().load().key(aiKey).now();
+		if (aiPlayer == null) { // register aiplayer in the server
+			aiPlayer = new Player("AI", "AI");
 		}
-		return null;
+		ofy().save().entity(aiPlayer).now();
+
+		Match match;
+		if (aiIsNorth) {
+			match = new Match(aiKey, playerKey, INITIAL_STATE_STRING);
+		}
+		else {
+			match = new Match(playerKey, aiKey, INITIAL_STATE_STRING);
+		}
+		match.setSingleGame(true);
+		Key<Match> matchKey = ofy().save().entity(match).now();
+
+		Long matchDate = match.getStartDate();
+		player.addMatch(matchKey);
+		String message1 = "newAIgame#" + match.getMatchId() + "#S#" + matchDate;
+		ofy().save().entities(player, match).now();
+		return message1;
+
 	}
 
 	@Override
 	public void saveAiMove(Long matchId, String moveString, String stateString) {
-		if (userService.isUserLoggedIn()) {
-			Key<Match> matchKey = Key.create(Match.class, matchId);
-			Match match = ofy().load().key(matchKey).now();
 
-			match.setState(stateString);
-			ofy().save().entity(match).now();
-		}
+		Key<Match> matchKey = Key.create(Match.class, matchId);
+		Match match = ofy().load().key(matchKey).now();
+
+		match.setState(stateString);
+		ofy().save().entity(match).now();
+
 	}
 
+	// @Override
+	// public String connectPlayer() {
+	// if (userService.isUserLoggedIn()) {
+	// User user = userService.getCurrentUser();
+	//
+	// String channelId = user.getEmail().toLowerCase();
+	//
+	// Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
+	// Player player = ofy().load().key(playerKey).now();
+	//
+	// if (player == null) { // New player
+	// player = new Player(user.getEmail().toLowerCase(), user.getNickname());
+	// }
+	// double rating = player.getRating();
+	// double RD = player.getRD();
+	// ofy().save().entity(player).now();
+	//
+	// String token = channelService.createChannel(channelId) + "#" + decimal.format(rating) + "#" + decimal.format(RD);
+	// return token;
+	// }
+	// return null;
+	// }
+
+	// @Override
+	// public String[] loadMatches() {
+	// if (userService.isUserLoggedIn()) {
+	// User user = userService.getCurrentUser();
+	//
+	// Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
+	// Player player = ofy().load().key(playerKey).now();
+	//
+	// String[] matches = new String[player.getMatchesList().size()];
+	// Set<Key<Match>> matchesList = player.getMatchesList();
+	//
+	// int index = 0;
+	// for (Key<Match> matchKey : matchesList) {
+	// Match match = ofy().load().key(matchKey).now();
+	// if (match == null) {
+	// continue;
+	// }
+	// Key<Player> opponentKey = match.getOpponent(playerKey);
+	// Player opponent = ofy().load().key(opponentKey).now();
+	//
+	// MatchInfo matchInfo = new MatchInfo();
+	// matchInfo.setMatchId(match.getMatchId() + "");
+	// Player northPlayer, southPlayer;
+	// if (match.isNorthPlayer(playerKey)) {
+	// northPlayer = player;
+	// southPlayer = opponent;
+	// }
+	// else {
+	// northPlayer = opponent;
+	// southPlayer = player;
+	// }
+	// matchInfo.setNorthPlayerId(northPlayer.getEmail());
+	// matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+	// matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+	// matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+	// matchInfo.setSouthPlayerId(southPlayer.getEmail());
+	// matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+	// matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+	// matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
+	//
+	// matchInfo.setState(match.getState());
+	// matchInfo.setMoveIndex(-1 + "");
+	// if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
+	// matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
+	// }
+	// else {
+	// matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
+	// }
+	// matchInfo.setStartDate(match.getStartDate() + "");
+	// matchInfo.setAction("loadMatches");
+	// String matchInfoString = MatchInfo.serialize(matchInfo);
+	//
+	// matches[index++] = matchInfoString;
+	//
+	// ofy().save().entities(match, opponent).now();
+	// }
+	// ofy().save().entity(player).now();
+	// return matches;
+	// }
+	// return null;
+	// }
+
+	// @Override
+	// public String changeMatch(Long matchId) {
+	// if (userService.isUserLoggedIn()) {
+	// if (matchId == null) {
+	// return "noMatch";
+	// }
+	//
+	// User user = userService.getCurrentUser();
+	//
+	// Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
+	// Player player = ofy().load().key(playerKey).now();
+	//
+	// Key<Match> matchKey = Key.create(Match.class, matchId);
+	// Match match = ofy().load().key(matchKey).now();
+	//
+	// Key<Player> opponentKey = match.getOpponent(playerKey);
+	// Player opponent = ofy().load().key(opponentKey).now();
+	//
+	// MatchInfo matchInfo = new MatchInfo();
+	// matchInfo.setMatchId(matchId + "");
+	// Player northPlayer, southPlayer;
+	// if (match.isNorthPlayer(playerKey)) {
+	// northPlayer = player;
+	// southPlayer = opponent;
+	// }
+	// else {
+	// northPlayer = opponent;
+	// southPlayer = player;
+	// }
+	// matchInfo.setNorthPlayerId(northPlayer.getEmail());
+	// matchInfo.setNorthPlayerName(northPlayer.getPlayerName());
+	// matchInfo.setNorthPlayerRating(decimal.format(northPlayer.getRating()));
+	// matchInfo.setNorthPlayerRD(decimal.format(northPlayer.getRD()));
+	// matchInfo.setSouthPlayerId(southPlayer.getEmail());
+	// matchInfo.setSouthPlayerName(southPlayer.getPlayerName());
+	// matchInfo.setSouthPlayerRating(decimal.format(southPlayer.getRating()));
+	// matchInfo.setSouthPlayerRD(decimal.format(southPlayer.getRD()));
+	// matchInfo.setState(match.getState());
+	// matchInfo.setMoveIndex(-1 + "");
+	//
+	// if ((match.isNorthPlayer(playerKey) && match.isNorthsTurn()) || (match.isSouthPlayer(playerKey) && !match.isNorthsTurn())) {
+	// matchInfo.setUserIdOfWhoseTurnItIs(player.getEmail());
+	// }
+	// else {
+	// matchInfo.setUserIdOfWhoseTurnItIs(opponent.getEmail());
+	// }
+	// matchInfo.setStartDate(match.getStartDate() + "");
+	// matchInfo.setAction("changeMatch");
+	//
+	// String message = MatchInfo.serialize(matchInfo);
+	//
+	// ofy().save().entities(match, player, opponent).now();
+	// return message;
+	// }
+	// return null;
+	// }
+
+	// @Override
+	// public void deleteMatch(Long matchId) {
+	// if (userService.isUserLoggedIn()) {
+	// User user = userService.getCurrentUser();
+	//
+	// Key<Player> playerKey = Key.create(Player.class, user.getEmail().toLowerCase());
+	// Player player = ofy().load().key(playerKey).now();
+	//
+	// Key<Match> matchKey = Key.create(Match.class, matchId);
+	//
+	// // Remove match from this player
+	// player.removeMatch(matchKey);
+	//
+	// ofy().save().entity(player).now();
+	//
+	// Match match = ofy().load().key(matchKey).now();
+	//
+	// Player opponent = ofy().load().key(match.getOpponent(playerKey)).now();
+	//
+	// if (!opponent.containsMatchKey(matchKey)) {
+	// // Delete the match from the datastore, if opponent has also deleted it
+	// ofy().delete().entity(match);
+	// }
+	// ofy().save().entities(match, opponent).now();
+	// }
+	// }
 }

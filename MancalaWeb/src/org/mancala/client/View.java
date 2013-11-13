@@ -1,5 +1,7 @@
 package org.mancala.client;
 
+import java.util.List;
+
 import org.mancala.shared.PlayerColor;
 import org.mancala.shared.State;
 
@@ -22,10 +24,9 @@ public interface View {
 	void setPitEnabled(PlayerColor side, int col, boolean enabled);
 
 	/**
-	 * /** Informs the user of certain events. If the parameter for the buttons is null no button will be displayed. The first
-	 * button makes the information disappear, the second starts a new game
+	 * Informs the user of certain events.
 	 */
-	void setMessage(String labelMsg, String HideBtnText, String restartBtnText);
+	void setMessage(String labelMsg);
 
 	/**
 	 * Animate seeds moving from one pit to an other
@@ -48,40 +49,24 @@ public interface View {
 	 */
 	void oppositeCaptureSound();
 
-	/**
-	 * Show the user name
-	 */
-	void setUserName(String userName);
-
-	/**
-	 * Show email address
-	 */
-	void setEmail(String email);
-
-	/**
-	 * Show status
-	 */
-	void setStatus(String status);
-
-	/**
-	 * Send the move just made to the server
-	 * 
-	 * @param serializedMove
-	 *          The String representation of the move
-	 * @param stateString
-	 *          The String representation of the state
-	 */
-	void sendMoveToServer(Integer chosenIndex, String stateString);
-
-	/**
-	 * Updates the matches listbox
-	 */
-	void updateMatchList();
-
 	void windowAlert(String serverError);
 
-	// void saveMoveInServer(Integer aiMove, State state);
-	void sendMoveToServerAI(Integer chosenIndex, State state);
+	void setUserNameLabelText(String text);
 
-	boolean getAiMatch();
+	void setWarnLabelText(String text);
+
+	void setOpponentNameLabelText(String text);
+
+	void setStartDateLabelText(String text);
+
+	void setTurnLabelText(String text);
+
+	void setSideLabelText(String text);
+
+	void setAiMovesLabelTextTriggerAiMove(String text, Graphics graphics);
+
+	void setContactsInList(List<ContactInfo> contacts);
+
+	void clearMatchDisplay();
+
 }
