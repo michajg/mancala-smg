@@ -19,7 +19,7 @@ import com.googlecode.objectify.condition.IfTrue;
 @Entity
 public class Player {
 	@Id
-	private String email;
+	private String id;
 	private String playerName;
 	private Set<String> connectedTokens;
 	private Set<Key<Match>> matches;
@@ -29,7 +29,7 @@ public class Player {
 	private double RD;
 
 	public Player() {
-		this.email = "";
+		this.id = "";
 		this.playerName = "";
 		connectedTokens = new HashSet<String>();
 		matches = new HashSet<Key<Match>>();
@@ -38,14 +38,14 @@ public class Player {
 		RD = 350;
 	}
 
-	public Player(String email, String name) {
+	public Player(String id, String name) {
 		this();
-		this.email = email;
+		this.id = id;
 		this.playerName = name;
 	}
 
-	public String getEmail() {
-		return email;
+	public String getId() {
+		return id;
 	}
 
 	public String getPlayerName() {

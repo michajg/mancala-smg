@@ -4,21 +4,19 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface MancalaServiceAsync {
 
-	void connectPlayer(AsyncCallback<String> callback);
+	void connectPlayer(String playerId, String name, AsyncCallback<String> callback);
 
-	void loadMatches(AsyncCallback<String[]> callback);
+	void loadMatches(String playerId, AsyncCallback<String[]> callback);
 
-	void automatch(AsyncCallback<Void> callback);
+	void startGame(String playerId, String opponentId, String opponentName, AsyncCallback<Boolean> callback);
 
-	void newEmailGame(String email, AsyncCallback<Boolean> callback);
+	void deleteMatch(String playerId, Long matchId, AsyncCallback<Void> callback);
 
-	void deleteMatch(Long matchId, AsyncCallback<Void> callback);
+	void changeMatch(String playerId, Long matchId, AsyncCallback<String> callback);
 
-	void changeMatch(Long matchId, AsyncCallback<String> callback);
+	void makeMove(String playerId, Long matchId, Integer chosenIndex, String stateString, AsyncCallback<Void> callback);
 
-	void makeMove(Long matchId, Integer chosenIndex, String stateString, AsyncCallback<Void> callback);
-
-	void registerAiMatch(boolean aiIsNorth, AsyncCallback<String> asyncCallback);
+	void registerAiMatch(String playerId, boolean aiIsNorth, AsyncCallback<String> asyncCallback);
 
 	void saveAiMove(Long matchId, String moveString, String stateString, AsyncCallback<Void> asyncCallback);
 

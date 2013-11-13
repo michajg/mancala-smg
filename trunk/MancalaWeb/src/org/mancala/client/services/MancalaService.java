@@ -6,21 +6,19 @@ import com.google.gwt.user.client.rpc.XsrfProtectedService;
 @RemoteServiceRelativePath("MancalaService")
 public interface MancalaService extends XsrfProtectedService {
 
-	public String connectPlayer();
+	public String connectPlayer(String playerId, String name);
 
-	public String[] loadMatches();
+	public String[] loadMatches(String playerId);
 
-	public void automatch();
+	public Boolean startGame(String playerId, String opponentId, String opponentName);
 
-	public Boolean newEmailGame(String email);
+	public void deleteMatch(String playerId, Long matchId);
 
-	public void deleteMatch(Long matchId);
+	public String changeMatch(String playerId, Long matchId);
 
-	public String changeMatch(Long matchId);
+	public void makeMove(String playerId, Long matchId, Integer chosenIndex, String stateString);
 
-	public void makeMove(Long matchId, Integer chosenIndex, String stateString);
-
-	public String registerAiMatch(boolean aiIsNorth);
+	public String registerAiMatch(String playerId, boolean aiIsNorth);
 
 	public void saveAiMove(Long matchId, String moveString, String stateString);
 

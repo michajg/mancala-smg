@@ -111,4 +111,14 @@ public interface MancalaMessages extends Messages {
 
 	@DefaultMessage("AI makes a Move")
 	String aiMakesMove();
+
+	@DefaultMessage("Do you want to start a game with {0}?")
+	String startGameQuestion(String name);
+
+	@DefaultMessage("Cancel")
+	String cancel();
+
+	@DefaultMessage("Do you want to continue with the game with {0}?")
+	String continueGameQuestion(String name);
+
 }
